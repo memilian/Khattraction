@@ -17,6 +17,10 @@ class AABB {
         return new AABB(ent.position,ent.size);
     }
 
+    public function expand(amount : Float) {
+        return new AABB(new Vector3(position.x-amount/2,position.y-amount/2,0),new Vector3(size.x+amount/2, size.y+amount/2));
+    }
+
     public function getCenter():Vector3 {
 
         return new Vector3((position.x+size.x)/2,

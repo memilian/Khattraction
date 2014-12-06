@@ -1,5 +1,6 @@
 package khattraction;
 
+import khattraction.entities.Wall;
 import haxe.Timer;
 import khattraction.entities.Entity;
 import engine.world.WorldManager;
@@ -41,6 +42,8 @@ class KhattractionGame extends Game {
 		WorldManager.createInstance(6,3,200,190);
 		bulletLauncher = new BulletLauncher(new Vector3(200,200,0), new Vector3(50,20,0));
 		WorldManager.the.spawnEntity(bulletLauncher);
+		var wall = new Wall(new Vector3(500,0,0), new Vector3(20,100,0));
+		WorldManager.the.spawnEntity(wall);
 		Loader.the.loadRoom("main", loadDone);
 	}
 

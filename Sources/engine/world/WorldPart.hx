@@ -8,6 +8,7 @@ class WorldPart {
     @:isVar public var bounds(default, null) : AABB;
     @:isVar public var coords(default, null) : Pair;
     var entities : Array<Entity>;
+    var entitiesOverlapping : Array<Entity>;
     var entitiesToAdd : Array<Entity>;
     var entitiesToRemove : Array<Entity>;
 
@@ -18,6 +19,7 @@ class WorldPart {
         entities = new Array<Entity>();
         entitiesToAdd = new Array<Entity>();
         entitiesToRemove = new Array<Entity>();
+        entitiesOverlapping = new Array<Entity>();
     }
 
     public function addEntityLater(ent:Entity):Void {
@@ -62,5 +64,30 @@ class WorldPart {
     public function render(g:Graphics){
         for(ent in entities)
             ent.render(g);
+    }
+
+    public function addOverlappingEntity(ent : Entity){
+        entitiesOverlapping.push(ent);
+    }
+
+    public function removeOverlappingEntity(ent : Entity){
+        entitiesOverlapping.remove(ent);
+    }
+
+    public function getEntitiesOfType(fake : Entity) : Array<Entity>{
+        var res = new Array<Entity>();
+        for(ent in entities){
+            if(Type.getClass(ent) == Type.getClass(fake)){
+                res.push(ent);
+            }
+        }
+
+        for(ent in entitiesOverlapping){
+            if(Type.getClass(ent) == Type.getClass(fake)){
+                res.push(ent);
+            }
+        }
+
+        return res;
     }
 }

@@ -4,17 +4,16 @@ import kha.math.Vector3;
 
 class GravitationalObject extends Entity{
 
-    @:isVar public var forceRadius(get, set):Float;
-    @:isVar public var forceStrength(get, set):Float;
+    @:isVar public var forceRadius(default, default):Float;
+    @:isVar public var forceStrength(default, default):Float;
 
-
-    public function new(position:Vector3,size:Vector3, forceRadius : Float, forceStrength:Float) {
+    public function new(position : Vector3, size : Vector3, forceStrength : Float = 1, forceRadius : Float = 100 ) {
         super(position,size);
         this.forceRadius = forceRadius;
         this.forceStrength = forceStrength;
     }
 
-    public function getInfluence(entity : Entity) : Vector3 {
+    public function applyInfluence(entity : Entity) : Vector3 {
 
     }
 

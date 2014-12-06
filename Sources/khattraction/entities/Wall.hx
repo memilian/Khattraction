@@ -15,7 +15,7 @@ class Wall extends Entity{
     }
 
     override public function render(g:Graphics):Void {
-        g.color(Color.fromBytes(48,48,150,1));
+        g.set_color(Color.fromBytes(48,48,200,255));
         g.fillRect(position.x, position.y, size.x, size.y);
     }
 }

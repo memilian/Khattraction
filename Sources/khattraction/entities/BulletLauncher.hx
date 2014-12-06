@@ -19,7 +19,7 @@ class BulletLauncher extends Entity {
     var angle:Float;
     var turnSpeed = 3;
     var lastShoot = 0.0;
-    @:isVar var freq = 0.05;//shoot frequency (s)
+    @:isVar var freq = 0.005;//shoot frequency (s)
 
     public function new(position:Vector3,size:Vector3) {
         super(position, size);

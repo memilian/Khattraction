@@ -95,4 +95,14 @@ class WorldManager {
             return false;
     }
 
+    public function getEntitiesInAabb(aabb, type : Class<Entity>){
+        var it = worldParts.keys();
+        var res = new Array();
+        while(it.hasNext()){
+            var arr = worldParts.get(it.next()).getEntitiesOfType(Type.createInstance(type, new Array()));
+            res = res.concat(arr);
+        }
+        return res;
+    }
+
 }

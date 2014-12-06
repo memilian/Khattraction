@@ -1,5 +1,6 @@
 -cp ../Sources
 -cp ../Kha/Sources
 -cp ../Kha/Backends/HTML5
+-D embed_js
 -js html5/kha.js
 -main Main

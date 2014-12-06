@@ -260,6 +260,10 @@ ValueType.TUnknown.__enum__ = ValueType;
 var Type = function() { };
 $hxClasses["Type"] = Type;
 Type.__name__ = ["Type"];
+Type.getClass = function(o) {
+	if(o == null) return null;
+	if((o instanceof Array) && o.__enum__ == null) return Array; else return o.__class__;
+};
 Type.getClassName = function(c) {
 	var a = c.__name__;
 	return a.join(".");
@@ -277,6 +281,32 @@ Type.resolveEnum = function(name) {
 	var e = $hxClasses[name];
 	if(e == null || !e.__ename__) return null;
 	return e;
+};
+Type.createInstance = function(cl,args) {
+	var _g = args.length;
+	switch(_g) {
+	case 0:
+		return new cl();
+	case 1:
+		return new cl(args[0]);
+	case 2:
+		return new cl(args[0],args[1]);
+	case 3:
+		return new cl(args[0],args[1],args[2]);
+	case 4:
+		return new cl(args[0],args[1],args[2],args[3]);
+	case 5:
+		return new cl(args[0],args[1],args[2],args[3],args[4]);
+	case 6:
+		return new cl(args[0],args[1],args[2],args[3],args[4],args[5]);
+	case 7:
+		return new cl(args[0],args[1],args[2],args[3],args[4],args[5],args[6]);
+	case 8:
+		return new cl(args[0],args[1],args[2],args[3],args[4],args[5],args[6],args[7]);
+	default:
+		throw "Too many arguments";
+	}
+	return null;
 };
 Type.createEmptyInstance = function(cl) {
 	function empty() {}; empty.prototype = cl.prototype;
@@ -505,6 +535,20 @@ engine.world.WorldManager.prototype = {
 			return true;
 		} else return false;
 	}
+	,getEntitiesInAabb: function(aabb,type) {
+		var it = this.worldParts.keys();
+		var res = new Array();
+		while(it.hasNext()) {
+			var arr = ((function($this) {
+				var $r;
+				var key = it.next();
+				$r = $this.worldParts.h[key.__id__];
+				return $r;
+			}(this))).getEntitiesOfType(Type.createInstance(type,new Array()));
+			res = res.concat(arr);
+		}
+		return res;
+	}
 	,__class__: engine.world.WorldManager
 };
 engine.world.WorldPart = function(aabb,coords) {
@@ -513,6 +557,7 @@ engine.world.WorldPart = function(aabb,coords) {
 	this.entities = new Array();
 	this.entitiesToAdd = new Array();
 	this.entitiesToRemove = new Array();
+	this.entitiesOverlapping = new Array();
 };
 $hxClasses["engine.world.WorldPart"] = engine.world.WorldPart;
 engine.world.WorldPart.__name__ = ["engine","world","WorldPart"];
@@ -559,6 +604,30 @@ engine.world.WorldPart.prototype = {
 			++_g;
 			ent.render(g);
 		}
+	}
+	,addOverlappingEntity: function(ent) {
+		this.entitiesOverlapping.push(ent);
+	}
+	,removeOverlappingEntity: function(ent) {
+		HxOverrides.remove(this.entitiesOverlapping,ent);
+	}
+	,getEntitiesOfType: function(fake) {
+		var res = new Array();
+		var _g = 0;
+		var _g1 = this.entities;
+		while(_g < _g1.length) {
+			var ent = _g1[_g];
+			++_g;
+			if(Type.getClass(ent) == Type.getClass(fake)) res.push(ent);
+		}
+		var _g2 = 0;
+		var _g11 = this.entitiesOverlapping;
+		while(_g2 < _g11.length) {
+			var ent1 = _g11[_g2];
+			++_g2;
+			if(Type.getClass(ent1) == Type.getClass(fake)) res.push(ent1);
+		}
+		return res;
 	}
 	,__class__: engine.world.WorldPart
 };
@@ -8975,13 +9044,15 @@ khattraction.KhattractionGame.prototype = $extend(kha.Game.prototype,{
 		engine.world.WorldManager.createInstance(6,3,200,190);
 		this.bulletLauncher = new khattraction.entities.BulletLauncher(new kha.math.Vector3(200,200,0),new kha.math.Vector3(50,20,0));
 		engine.world.WorldManager.the.spawnEntity(this.bulletLauncher);
+		var wall = new khattraction.entities.Wall(new kha.math.Vector3(500,0,0),new kha.math.Vector3(20,100,0));
+		engine.world.WorldManager.the.spawnEntity(wall);
 		kha.Loader.the.loadRoom("main",$bind(this,this.loadDone));
 	}
 	,loadDone: function() {
 		kha.Configuration.setScreen(this);
 		khattraction.KhattractionGame.gameBounds = new khattraction.physic.AABB(new kha.math.Vector3(0,0,0),new kha.math.Vector3(this.width,this.height,0));
 		this.inidone = true;
-		haxe.Log.trace("loadDone",{ fileName : "KhattractionGame.hx", lineNumber : 51, className : "khattraction.KhattractionGame", methodName : "loadDone"});
+		haxe.Log.trace("loadDone",{ fileName : "KhattractionGame.hx", lineNumber : 54, className : "khattraction.KhattractionGame", methodName : "loadDone"});
 	}
 	,update: function() {
 		if(!this.inidone) return;
@@ -9065,6 +9136,9 @@ khattraction.entities.MovingEntity.prototype = $extend(khattraction.entities.Ent
 khattraction.entities.Bullet = function(position,size,initialVelocity) {
 	this.speed = 6.0;
 	this.defaultColor = 25358591;
+	this.isDead = false;
+	this.maxDeadCounter = 60;
+	this.deadCounter = 0;
 	this.maxBuffSize = 5;
 	khattraction.entities.MovingEntity.call(this,position,size,initialVelocity.mult(this.speed));
 	this.image = kha.Loader.the.getImage("bullet");
@@ -9075,12 +9149,32 @@ khattraction.entities.Bullet.__name__ = ["khattraction","entities","Bullet"];
 khattraction.entities.Bullet.__super__ = khattraction.entities.MovingEntity;
 khattraction.entities.Bullet.prototype = $extend(khattraction.entities.MovingEntity.prototype,{
 	update: function() {
+		if(this.isDead) {
+			if(this.posBuffer.length > this.maxBuffSize) this.posBuffer.pop();
+			this.posBuffer.splice(0,0,this.position);
+			if(this.deadCounter++ > this.maxDeadCounter) engine.world.WorldManager.the.removeEntity(this);
+			return;
+		}
 		khattraction.entities.MovingEntity.prototype.update.call(this);
 		if(this.posBuffer.length > this.maxBuffSize) this.posBuffer.pop();
 		this.posBuffer.splice(0,0,this.position);
-		if(!khattraction.KhattractionGame.gameBounds.collide(khattraction.physic.AABB.AabbFromEntity(this))) engine.world.WorldManager.the.removeEntity(this);
+		if(!khattraction.KhattractionGame.gameBounds.collide(khattraction.physic.AABB.AabbFromEntity(this))) {
+			this.isDead = true;
+			this.position = this.position.sub(this.get_velocity());
+		}
+		var walls = engine.world.WorldManager.the.getEntitiesInAabb(khattraction.physic.AABB.AabbFromEntity(this).expand(50),khattraction.entities.Wall);
+		var _g = 0;
+		while(_g < walls.length) {
+			var wall = walls[_g];
+			++_g;
+			if(khattraction.physic.AABB.AabbFromEntity(this).collide(khattraction.physic.AABB.AabbFromEntity(wall))) this.isDead = true;
+		}
 	}
 	,render: function(g) {
+		if(this.isDead) {
+			this.playDeathAnimation(g);
+			return;
+		}
 		g.set_color(this.defaultColor);
 		var _g1 = 0;
 		var _g = this.posBuffer.length;
@@ -9092,10 +9186,29 @@ khattraction.entities.Bullet.prototype = $extend(khattraction.entities.MovingEnt
 		}
 		g.set_opacity(1);
 	}
+	,playDeathAnimation: function(g) {
+		var deathRatio = 1.0 * this.deadCounter / (1.0 * this.maxDeadCounter);
+		var _g1 = 0;
+		var _g = this.posBuffer.length;
+		while(_g1 < _g) {
+			var i = _g1++;
+			var pos = this.posBuffer[i];
+			g.set_opacity(1 - i / this.maxBuffSize);
+			g.drawScaledImage(this.image,pos.x,pos.y,this.size.x * (1 - deathRatio),this.size.y * (1 - deathRatio));
+		}
+		g.set_opacity(1);
+		g.set_color(kha._Color.Color_Impl_.fromBytes(100 + (deathRatio * 155 | 0),255 - (deathRatio * 150 | 0),100 - (deathRatio * 100 | 0),255 - (255 * deathRatio | 0)));
+		var _g2 = 0;
+		while(_g2 < 10) {
+			var i1 = _g2++;
+			var dAngle = i1 * Math.PI * 0.05 * deathRatio + Math.PI / 5;
+			g.drawScaledImage(this.image,this.position.x + deathRatio * Math.cos(dAngle * i1) * 50,this.position.y + deathRatio * Math.sin(dAngle * i1) * 50,this.size.x - this.size.x * deathRatio,this.size.y - this.size.y * deathRatio);
+		}
+	}
 	,__class__: khattraction.entities.Bullet
 });
 khattraction.entities.BulletLauncher = function(position,size) {
-	this.freq = 0.05;
+	this.freq = 0.005;
 	this.lastShoot = 0.0;
 	this.turnSpeed = 3;
 	khattraction.entities.Entity.call(this,position,size);
@@ -9142,6 +9255,22 @@ khattraction.entities.BulletLauncher.prototype = $extend(khattraction.entities.E
 	}
 	,__class__: khattraction.entities.BulletLauncher
 });
+khattraction.entities.Wall = function(position,size) {
+	khattraction.entities.Entity.call(this,position,size);
+	this.zindex = 10;
+};
+$hxClasses["khattraction.entities.Wall"] = khattraction.entities.Wall;
+khattraction.entities.Wall.__name__ = ["khattraction","entities","Wall"];
+khattraction.entities.Wall.__super__ = khattraction.entities.Entity;
+khattraction.entities.Wall.prototype = $extend(khattraction.entities.Entity.prototype,{
+	update: function() {
+	}
+	,render: function(g) {
+		g.set_color(kha._Color.Color_Impl_.fromBytes(48,48,200,255));
+		g.fillRect(this.position.x,this.position.y,this.size.x,this.size.y);
+	}
+	,__class__: khattraction.entities.Wall
+});
 khattraction.mathutils = {};
 khattraction.mathutils.Angles = function() { };
 $hxClasses["khattraction.mathutils.Angles"] = khattraction.mathutils.Angles;
@@ -9163,7 +9292,10 @@ khattraction.physic.AABB.AabbFromEntity = function(ent) {
 	return new khattraction.physic.AABB(ent.position,ent.size);
 };
 khattraction.physic.AABB.prototype = {
-	getCenter: function() {
+	expand: function(amount) {
+		return new khattraction.physic.AABB(new kha.math.Vector3(this.position.x - amount / 2,this.position.y - amount / 2,0),new kha.math.Vector3(this.size.x + amount / 2,this.size.y + amount / 2));
+	}
+	,getCenter: function() {
 		return new kha.math.Vector3((this.position.x + this.size.x) / 2,(this.position.y + this.size.y) / 2,(this.position.z + this.size.z) / 2);
 	}
 	,collide: function(other) {
