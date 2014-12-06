@@ -1,0 +1,25 @@
+{
+	"format": 1,
+	"game": {
+		"name": "LD31",
+		"width": 1200,
+		"height": 550
+	},
+	"assets": [
+		{
+			"id": "098ae4f1-b591-4792-b49e-ff8186f7098f",
+			"type": "image",
+			"file": "tst.png",
+			"name": "tst"
+		}
+	],
+	"rooms": [
+		{
+			"id": "ca3cb0af-f9f7-4605-80d5-fea8c52b1f2f",
+			"name": "main",
+			"parent": null,
+			"neighbours": [],
+			"assets": []
+		}
+	]
+}

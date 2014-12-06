@@ -1,0 +1,5 @@
+-cp ../Sources
+-cp ../Kha/Sources
+-cp ../Kha/Backends/HTML5
+-js html5/kha.js
+-main Main

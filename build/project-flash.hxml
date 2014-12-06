@@ -1,0 +1,6 @@
+-cp ../Sources
+-cp ../Kha/Sources
+-cp ../Kha/Backends/Flash
+-swf flash/kha.swf
+-swf-version 11.6
+-main Main

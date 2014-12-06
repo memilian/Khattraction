@@ -1,0 +1,99 @@
+{
+	"format": 1,
+	"game": {
+		"name": "LD31",
+		"width": 1200,
+		"height": 550
+	},
+	"assets": [
+		{
+			"id": "098ae4f1-b591-4792-b49e-ff8186f7098f",
+			"type": "image",
+			"file": "tst.png",
+			"name": "tst"
+		}
+	],
+	"rooms": [
+		{
+			"id": "ca3cb0af-f9f7-4605-80d5-fea8c52b1f2f",
+			"name": "main",
+			"parent": null,
+			"neighbours": [],
+			"assets": []
+		}
+	],
+	"shaders": [
+		{
+			"file": "painter-colored.frag.essl",
+			"name": "painter-colored.frag"
+		},
+		{
+			"file": "painter-colored.vert.essl",
+			"name": "painter-colored.vert"
+		},
+		{
+			"file": "painter-image.frag.essl",
+			"name": "painter-image.frag"
+		},
+		{
+			"file": "painter-image.vert.essl",
+			"name": "painter-image.vert"
+		},
+		{
+			"file": "painter-text.frag.essl",
+			"name": "painter-text.frag"
+		},
+		{
+			"file": "painter-text.vert.essl",
+			"name": "painter-text.vert"
+		},
+		{
+			"file": "scene-mesh.frag.essl",
+			"name": "scene-mesh.frag"
+		},
+		{
+			"file": "scene-mesh.vert.essl",
+			"name": "scene-mesh.vert"
+		},
+		{
+			"file": "shader.frag.essl",
+			"name": "shader.frag"
+		},
+		{
+			"file": "shader.vert.essl",
+			"name": "shader.vert"
+		},
+		{
+			"file": "painter-colored.frag.essl",
+			"name": "painter-colored.frag"
+		},
+		{
+			"file": "painter-colored.vert.essl",
+			"name": "painter-colored.vert"
+		},
+		{
+			"file": "painter-image.frag.essl",
+			"name": "painter-image.frag"
+		},
+		{
+			"file": "painter-image.vert.essl",
+			"name": "painter-image.vert"
+		},
+		{
+			"file": "painter-text.frag.essl",
+			"name": "painter-text.frag"
+		},
+		{
+			"file": "painter-text.vert.essl",
+			"name": "painter-text.vert"
+		},
+		{
+			"file": "scene-mesh.frag.essl",
+			"name": "scene-mesh.frag"
+		},
+		{
+			"file": "scene-mesh.vert.essl",
+			"name": "scene-mesh.vert"
+		}
+	]
+}
