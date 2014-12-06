@@ -1,4 +1,4 @@
-package gravity.mathutils;
+package khattraction.mathutils;
 
 class Angles {
 

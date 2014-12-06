@@ -99,108 +99,6 @@ HxOverrides.iter = function(a) {
 		return this.arr[this.cur++];
 	}};
 };
-var kha = {};
-kha.Game = function(name,hasHighscores) {
-	if(hasHighscores == null) hasHighscores = false;
-	this.deprecatedImage = null;
-	this.setInstance();
-	this.name = name;
-	if(hasHighscores) this.highscores = new kha.HighscoreList();
-	this.scene = kha.Scene.get_the();
-	this.width = kha.Loader.the.width | 0;
-	this.height = kha.Loader.the.height | 0;
-};
-$hxClasses["kha.Game"] = kha.Game;
-kha.Game.__name__ = ["kha","Game"];
-kha.Game.prototype = {
-	setInstance: function() {
-		kha.Game.the = this;
-	}
-	,loadFinished: function() {
-		var w = kha.Loader.the.width;
-		if(w > 0) this.width = w;
-		var h = kha.Loader.the.height;
-		if(h > 0) this.height = h;
-		this.init();
-	}
-	,init: function() {
-	}
-	,update: function() {
-		this.scene.update();
-	}
-	,startRender: function(frame) {
-		frame.get_g2().begin();
-	}
-	,endRender: function(frame) {
-		frame.get_g2().end();
-	}
-	,render: function(frame) {
-		this.startRender(frame);
-		this.scene.render(frame.get_g2());
-		this.endRender(frame);
-	}
-	,getHighscores: function() {
-		return this.highscores;
-	}
-	,initDeprecatedImage: function() {
-		if(this.deprecatedImage != null) return;
-		this.deprecatedImage = kha.Image.create(this.width,this.height,kha.graphics4.TextureFormat.L8);
-	}
-	,painterTransformMouseX: function(x,y) {
-		this.initDeprecatedImage();
-		return kha.Scaler.transformX(x,y,this.deprecatedImage,kha.ScreenCanvas.get_the(),kha.Sys.screenRotation);
-	}
-	,painterTransformMouseY: function(x,y) {
-		this.initDeprecatedImage();
-		return kha.Scaler.transformY(x,y,this.deprecatedImage,kha.ScreenCanvas.get_the(),kha.Sys.screenRotation);
-	}
-	,buttonDown: function(button) {
-	}
-	,buttonUp: function(button) {
-	}
-	,keyDown: function(key,$char) {
-	}
-	,keyUp: function(key,$char) {
-	}
-	,mouseDown: function(x,y) {
-	}
-	,mouseUp: function(x,y) {
-	}
-	,rightMouseDown: function(x,y) {
-	}
-	,rightMouseUp: function(x,y) {
-	}
-	,middleMouseDown: function(x,y) {
-	}
-	,middleMouseUp: function(x,y) {
-	}
-	,mouseMove: function(x,y) {
-	}
-	,mouseWheel: function(delta) {
-	}
-	,onForeground: function() {
-	}
-	,onResume: function() {
-	}
-	,onPause: function() {
-	}
-	,onBackground: function() {
-	}
-	,onShutdown: function() {
-	}
-	,onClose: function() {
-	}
-	,__class__: kha.Game
-};
-var LD31 = function() {
-	kha.Game.call(this,"Empty",false);
-};
-$hxClasses["LD31"] = LD31;
-LD31.__name__ = ["LD31"];
-LD31.__super__ = kha.Game;
-LD31.prototype = $extend(kha.Game.prototype,{
-	__class__: LD31
-});
 var Lambda = function() { };
 $hxClasses["Lambda"] = Lambda;
 Lambda.__name__ = ["Lambda"];
@@ -256,7 +154,7 @@ $hxClasses["Main"] = Main;
 Main.__name__ = ["Main"];
 Main.main = function() {
 	var starter = new kha.Starter();
-	starter.start(new LD31());
+	starter.start(new khattraction.KhattractionGame());
 };
 var IMap = function() { };
 $hxClasses["IMap"] = IMap;
@@ -425,146 +323,9 @@ Type["typeof"] = function(v) {
 		return ValueType.TUnknown;
 	}
 };
-var gravity = {};
-gravity.GravityGame = function() {
-	kha.Game.call(this,"Empty",false);
-	gravity.GravityGame.instance = this;
-	kha.math.Random.init(Math.floor(new Date().getTime()));
-	this.test = new gravity.TestEnt();
-	this.bulletLauncher = new gravity.entities.BulletLauncher(new kha.math.Vector3(200,200,0),new kha.math.Vector3(50,20,0));
-};
-$hxClasses["gravity.GravityGame"] = gravity.GravityGame;
-gravity.GravityGame.__name__ = ["gravity","GravityGame"];
-gravity.GravityGame.__super__ = kha.Game;
-gravity.GravityGame.prototype = $extend(kha.Game.prototype,{
-	init: function() {
-		this.backBuffer = kha.Image.createRenderTarget(this.width,this.height);
-		this.vShader = new kha.graphics4.VertexShader(kha.Loader.the.getShader("shader.vert"));
-		this.fShader = new kha.graphics4.FragmentShader(kha.Loader.the.getShader("shader.frag"));
-		var structure = new kha.graphics4.VertexStructure();
-		structure.add("pos",kha.graphics4.VertexData.Float3);
-		this.program = new kha.graphics4.Program();
-		this.program.setVertexShader(gravity.GravityGame.instance.vShader);
-		this.program.setFragmentShader(gravity.GravityGame.instance.fShader);
-		this.program.link(structure);
-		this.vertices = new kha.graphics4.VertexBuffer(3,structure,kha.graphics4.Usage.StaticUsage);
-		var v = this.vertices.lock();
-		v[0] = -1;
-		v[1] = -1;
-		v[2] = 0.5;
-		v[3] = 1;
-		v[4] = -1;
-		v[5] = 0.5;
-		v[6] = -1;
-		v[7] = 1;
-		v[8] = 0.5;
-		this.vertices.unlock();
-		this.indices = new kha.graphics4.IndexBuffer(3,kha.graphics4.Usage.StaticUsage);
-		var i = this.indices.lock();
-		i[0] = 0;
-		i[1] = 1;
-		i[2] = 2;
-		this.indices.unlock();
-		this.loadDone();
-	}
-	,loadDone: function() {
-		kha.Configuration.setScreen(this);
-	}
-	,update: function() {
-		gravity.input.Dispatcher.get().update();
-		this.bulletLauncher.update();
-	}
-	,render: function(frame) {
-		var g = this.backBuffer.get_g2();
-		g.begin();
-		g.clear(kha._Color.Color_Impl_.fromBytes(48,48,48,255));
-		this.bulletLauncher.render(g);
-		g.end();
-		haxe.Log.trace(this.width + "  " + this.height,{ fileName : "GravityGame.hx", lineNumber : 88, className : "gravity.GravityGame", methodName : "render"});
-		this.startRender(frame);
-		kha.Scaler.scale(this.backBuffer,frame,kha.Sys.screenRotation);
-		this.endRender(frame);
-	}
-	,__class__: gravity.GravityGame
-});
-gravity.TestEnt = function() {
-	this.position = new kha.math.Vector2(50,50);
-};
-$hxClasses["gravity.TestEnt"] = gravity.TestEnt;
-gravity.TestEnt.__name__ = ["gravity","TestEnt"];
-gravity.TestEnt.prototype = {
-	update: function() {
-	}
-	,render: function(g) {
-		g.set_color(kha._Color.Color_Impl_.Cyan);
-		kha.graphics2.GraphicsExtension.fillCircle(g,this.position.x,this.position.y,50,90);
-	}
-	,__class__: gravity.TestEnt
-};
-gravity.entities = {};
-gravity.entities.Entity = function(position,size) {
-	this.set_position(position);
-	this.set_size(size);
-};
-$hxClasses["gravity.entities.Entity"] = gravity.entities.Entity;
-gravity.entities.Entity.__name__ = ["gravity","entities","Entity"];
-gravity.entities.Entity.prototype = {
-	update: function() {
-	}
-	,render: function(g) {
-	}
-	,get_position: function() {
-		return this.position;
-	}
-	,set_position: function(value) {
-		return this.position = value;
-	}
-	,set_size: function(value) {
-		return this.size = value;
-	}
-	,get_size: function() {
-		return this.size;
-	}
-	,__class__: gravity.entities.Entity
-};
-gravity.entities.BulletLauncher = function(position,size) {
-	gravity.entities.Entity.call(this,position,size);
-	this.angle = 90;
-	gravity.input.Dispatcher.get().notify(null,null,$bind(this,this.onKeyPress));
-};
-$hxClasses["gravity.entities.BulletLauncher"] = gravity.entities.BulletLauncher;
-gravity.entities.BulletLauncher.__name__ = ["gravity","entities","BulletLauncher"];
-gravity.entities.BulletLauncher.__super__ = gravity.entities.Entity;
-gravity.entities.BulletLauncher.prototype = $extend(gravity.entities.Entity.prototype,{
-	onKeyPress: function(key,str) {
-		if(key == kha.Key.CHAR && str == "z") this.angle += 1.5;
-		if(key == kha.Key.CHAR && str == "s") this.angle -= 1.5;
-	}
-	,update: function() {
-	}
-	,render: function(g) {
-		var _g = 0;
-		while(_g < 10) {
-			var i = _g++;
-			g.set_color(kha._Color.Color_Impl_.fromBytes(10 * i,255 - 20 * i,100));
-			g.set_opacity(0.5);
-			kha.graphics2.GraphicsExtension.fillCircle(g,this.get_position().x + 5 * i,this.get_position().y + 10 * i,this.get_size().x / 2,180);
-			g.pushTranslation(this.get_position().x + 15 * i,this.get_position().y + 33 * i);
-			g.pushRotation(gravity.mathutils.Angles.toRadian(this.angle),this.get_position().x,this.get_position().y);
-			g.set_opacity(0.9);
-			g.setBlendingMode(kha.graphics4.BlendingOperation.BlendOne,kha.graphics4.BlendingOperation.InverseDestinationAlpha);
-			g.set_color(kha._Color.Color_Impl_.Black);
-			g.fillRect(-this.get_size().x / 2,-this.get_size().y / 2,this.get_size().x,this.get_size().y);
-			g.popTransformation();
-			g.popTransformation();
-			g.set_opacity(1);
-			g.setBlendingMode(kha.graphics4.BlendingOperation.BlendOne,kha.graphics4.BlendingOperation.BlendOne);
-		}
-	}
-	,__class__: gravity.entities.BulletLauncher
-});
-gravity.input = {};
-gravity.input.Dispatcher = function() {
+var engine = {};
+engine.input = {};
+engine.input.Dispatcher = function() {
 	this.keyboard = kha.input.Keyboard.get(0);
 	this.keyboard.notify($bind(this,this.onKeyDown),$bind(this,this.onKeyUp));
 	this.pressListeners = new Array();
@@ -573,13 +334,13 @@ gravity.input.Dispatcher = function() {
 	this.keyStates = new haxe.ds.EnumValueMap();
 	this.keyCharStates = new haxe.ds.StringMap();
 };
-$hxClasses["gravity.input.Dispatcher"] = gravity.input.Dispatcher;
-gravity.input.Dispatcher.__name__ = ["gravity","input","Dispatcher"];
-gravity.input.Dispatcher.get = function() {
-	if(gravity.input.Dispatcher.instance == null) gravity.input.Dispatcher.instance = new gravity.input.Dispatcher();
-	return gravity.input.Dispatcher.instance;
+$hxClasses["engine.input.Dispatcher"] = engine.input.Dispatcher;
+engine.input.Dispatcher.__name__ = ["engine","input","Dispatcher"];
+engine.input.Dispatcher.get = function() {
+	if(engine.input.Dispatcher.instance == null) engine.input.Dispatcher.instance = new engine.input.Dispatcher();
+	return engine.input.Dispatcher.instance;
 };
-gravity.input.Dispatcher.prototype = {
+engine.input.Dispatcher.prototype = {
 	update: function() {
 		var $it0 = this.keyStates.keys();
 		while( $it0.hasNext() ) {
@@ -643,17 +404,163 @@ gravity.input.Dispatcher.prototype = {
 			this.keyStates.set(key,false);
 		}
 	}
-	,__class__: gravity.input.Dispatcher
+	,__class__: engine.input.Dispatcher
 };
-gravity.mathutils = {};
-gravity.mathutils.Angles = function() { };
-$hxClasses["gravity.mathutils.Angles"] = gravity.mathutils.Angles;
-gravity.mathutils.Angles.__name__ = ["gravity","mathutils","Angles"];
-gravity.mathutils.Angles.toDegree = function(angle) {
-	return 180 * angle / 3.14159;
+engine.utils = {};
+engine.utils.Pair = function(x,y) {
+	this.x = x;
+	this.y = y;
+	this.__id__ = this.hashCode();
 };
-gravity.mathutils.Angles.toRadian = function(angle) {
-	return 3.14159 * angle / 180;
+$hxClasses["engine.utils.Pair"] = engine.utils.Pair;
+engine.utils.Pair.__name__ = ["engine","utils","Pair"];
+engine.utils.Pair.prototype = {
+	equals: function(other) {
+		return this.x == other.x && this.y == other.y;
+	}
+	,hashCode: function() {
+		var hash = this.x * 127 + this.y * 17 + 1;
+		return hash;
+	}
+	,__class__: engine.utils.Pair
+};
+engine.world = {};
+engine.world.WorldManager = function(partCountX,partCountY,partWidth,partHeight) {
+	engine.world.WorldManager.the = this;
+	this.partHeight = partHeight;
+	this.partWidth = partWidth;
+	this.worldParts = new haxe.ds.ObjectMap();
+	var partSize = new kha.math.Vector3(partWidth,partHeight,0);
+	var _g = 0;
+	while(_g < partCountX) {
+		var x = _g++;
+		var _g1 = 0;
+		while(_g1 < partCountY) {
+			var y = _g1++;
+			var coords = new engine.utils.Pair(x,y);
+			var bounds = new khattraction.physic.AABB(new kha.math.Vector3(x * partWidth,y * partHeight,0),partSize);
+			var value = new engine.world.WorldPart(bounds,coords);
+			this.worldParts.set(coords,value);
+		}
+	}
+};
+$hxClasses["engine.world.WorldManager"] = engine.world.WorldManager;
+engine.world.WorldManager.__name__ = ["engine","world","WorldManager"];
+engine.world.WorldManager.createInstance = function(partCountX,partCountY,partWidth,partHeight) {
+	if(engine.world.WorldManager.the == null) engine.world.WorldManager.the = new engine.world.WorldManager(partCountX,partCountY,partWidth,partHeight);
+};
+engine.world.WorldManager.prototype = {
+	getEntities: function() {
+		var ents = new Array();
+		var it = this.worldParts.keys();
+		while(it.hasNext()) {
+			var part;
+			var key = it.next();
+			part = this.worldParts.h[key.__id__];
+			ents = ents.concat(part.getEntities());
+		}
+		return ents;
+	}
+	,removeEntity: function(ent) {
+		var part = this.getPartForEntity(ent);
+		if(part != null) part.removeEntity(ent);
+	}
+	,spawnEntity: function(ent) {
+		var part = this.getPartForEntity(ent);
+		if(part != null) part.addEntity(ent);
+	}
+	,getCoordFromPos: function(pos) {
+		var coordX = Math.floor(pos.x / this.partWidth);
+		var coordY = Math.floor(pos.y / this.partHeight);
+		return new engine.utils.Pair(coordX,coordY);
+	}
+	,update: function() {
+		var it = this.worldParts.keys();
+		while(it.hasNext()) ((function($this) {
+			var $r;
+			var key = it.next();
+			$r = $this.worldParts.h[key.__id__];
+			return $r;
+		}(this))).update();
+	}
+	,render: function(g) {
+		var it = this.worldParts.keys();
+		while(it.hasNext()) ((function($this) {
+			var $r;
+			var key = it.next();
+			$r = $this.worldParts.h[key.__id__];
+			return $r;
+		}(this))).render(g);
+	}
+	,getPartForEntity: function(ent) {
+		var coord = this.getCoordFromPos(khattraction.physic.AABB.AabbFromEntity(ent).getCenter());
+		if(!(this.worldParts.h.__keys__[coord.__id__] != null)) return null;
+		var part = this.worldParts.h[coord.__id__];
+		return part;
+	}
+	,placeLater: function(ent) {
+		var part = this.getPartForEntity(ent);
+		if(part != null) {
+			part.addEntityLater(ent);
+			return true;
+		} else return false;
+	}
+	,__class__: engine.world.WorldManager
+};
+engine.world.WorldPart = function(aabb,coords) {
+	this.bounds = aabb;
+	this.coords = coords;
+	this.entities = new Array();
+	this.entitiesToAdd = new Array();
+	this.entitiesToRemove = new Array();
+};
+$hxClasses["engine.world.WorldPart"] = engine.world.WorldPart;
+engine.world.WorldPart.__name__ = ["engine","world","WorldPart"];
+engine.world.WorldPart.prototype = {
+	addEntityLater: function(ent) {
+		this.entitiesToAdd.push(ent);
+	}
+	,addEntity: function(ent) {
+		this.entities.push(ent);
+		this.entities.sort($bind(this,this.sortByZindex));
+	}
+	,removeEntity: function(ent) {
+		HxOverrides.remove(this.entities,ent);
+	}
+	,getEntities: function() {
+		return this.entities;
+	}
+	,sortByZindex: function(ent,other) {
+		if(ent.zindex > other.zindex) return 1; else if(ent.zindex == other.zindex) return 0; else return -1;
+	}
+	,update: function() {
+		while(this.entitiesToRemove.length > 0) {
+			var x = this.entitiesToRemove.pop();
+			HxOverrides.remove(this.entities,x);
+		}
+		while(this.entitiesToAdd.length > 0) this.addEntity(this.entitiesToAdd.pop());
+		var _g = 0;
+		var _g1 = this.entities;
+		while(_g < _g1.length) {
+			var ent = _g1[_g];
+			++_g;
+			ent.update();
+			if(!this.bounds.contains(khattraction.physic.AABB.AabbFromEntity(ent).getCenter())) {
+				this.entitiesToRemove.push(ent);
+				if(!engine.world.WorldManager.the.placeLater(ent)) this.entitiesToRemove.push(ent);
+			}
+		}
+	}
+	,render: function(g) {
+		var _g = 0;
+		var _g1 = this.entities;
+		while(_g < _g1.length) {
+			var ent = _g1[_g];
+			++_g;
+			ent.render(g);
+		}
+	}
+	,__class__: engine.world.WorldPart
 };
 var haxe = {};
 haxe.Log = function() { };
@@ -918,6 +825,12 @@ haxe.Serializer.prototype = {
 		}
 	}
 	,__class__: haxe.Serializer
+};
+haxe.Timer = function() { };
+$hxClasses["haxe.Timer"] = haxe.Timer;
+haxe.Timer.__name__ = ["haxe","Timer"];
+haxe.Timer.stamp = function() {
+	return new Date().getTime() / 1000;
 };
 haxe.Unserializer = function(buf) {
 	this.buf = buf;
@@ -1742,6 +1655,7 @@ js.Lib.__name__ = ["js","Lib"];
 js.Lib.alert = function(v) {
 	alert(js.Boot.__string_rec(v,""));
 };
+var kha = {};
 kha.Animation = $hx_exports.kha.Animation = function(indices,speeddiv) {
 	this.indices = indices;
 	this.index = 0;
@@ -2718,6 +2632,98 @@ kha.Direction.LEFT = ["LEFT",2];
 kha.Direction.LEFT.__enum__ = kha.Direction;
 kha.Direction.RIGHT = ["RIGHT",3];
 kha.Direction.RIGHT.__enum__ = kha.Direction;
+kha.Game = function(name,hasHighscores) {
+	if(hasHighscores == null) hasHighscores = false;
+	this.deprecatedImage = null;
+	this.setInstance();
+	this.name = name;
+	if(hasHighscores) this.highscores = new kha.HighscoreList();
+	this.scene = kha.Scene.get_the();
+	this.width = kha.Loader.the.width | 0;
+	this.height = kha.Loader.the.height | 0;
+};
+$hxClasses["kha.Game"] = kha.Game;
+kha.Game.__name__ = ["kha","Game"];
+kha.Game.prototype = {
+	setInstance: function() {
+		kha.Game.the = this;
+	}
+	,loadFinished: function() {
+		var w = kha.Loader.the.width;
+		if(w > 0) this.width = w;
+		var h = kha.Loader.the.height;
+		if(h > 0) this.height = h;
+		this.init();
+	}
+	,init: function() {
+	}
+	,update: function() {
+		this.scene.update();
+	}
+	,startRender: function(frame) {
+		frame.get_g2().begin();
+	}
+	,endRender: function(frame) {
+		frame.get_g2().end();
+	}
+	,render: function(frame) {
+		this.startRender(frame);
+		this.scene.render(frame.get_g2());
+		this.endRender(frame);
+	}
+	,getHighscores: function() {
+		return this.highscores;
+	}
+	,initDeprecatedImage: function() {
+		if(this.deprecatedImage != null) return;
+		this.deprecatedImage = kha.Image.create(this.width,this.height,kha.graphics4.TextureFormat.L8);
+	}
+	,painterTransformMouseX: function(x,y) {
+		this.initDeprecatedImage();
+		return kha.Scaler.transformX(x,y,this.deprecatedImage,kha.ScreenCanvas.get_the(),kha.Sys.screenRotation);
+	}
+	,painterTransformMouseY: function(x,y) {
+		this.initDeprecatedImage();
+		return kha.Scaler.transformY(x,y,this.deprecatedImage,kha.ScreenCanvas.get_the(),kha.Sys.screenRotation);
+	}
+	,buttonDown: function(button) {
+	}
+	,buttonUp: function(button) {
+	}
+	,keyDown: function(key,$char) {
+	}
+	,keyUp: function(key,$char) {
+	}
+	,mouseDown: function(x,y) {
+	}
+	,mouseUp: function(x,y) {
+	}
+	,rightMouseDown: function(x,y) {
+	}
+	,rightMouseUp: function(x,y) {
+	}
+	,middleMouseDown: function(x,y) {
+	}
+	,middleMouseUp: function(x,y) {
+	}
+	,mouseMove: function(x,y) {
+	}
+	,mouseWheel: function(delta) {
+	}
+	,onForeground: function() {
+	}
+	,onResume: function() {
+	}
+	,onPause: function() {
+	}
+	,onBackground: function() {
+	}
+	,onShutdown: function() {
+	}
+	,onClose: function() {
+	}
+	,__class__: kha.Game
+};
 kha.EmptyScreen = function(color) {
 	kha.Game.call(this,"Nothing",false);
 	this.color = color;
@@ -8950,6 +8956,224 @@ kha.math.Vector4.prototype = {
 	}
 	,__class__: kha.math.Vector4
 };
+var khattraction = {};
+khattraction.KhattractionGame = function() {
+	this.inidone = false;
+	this.lastRender = 0;
+	this.lastUpdate = 0;
+	kha.Game.call(this,"Khattraction",false);
+	khattraction.KhattractionGame.instance = this;
+};
+$hxClasses["khattraction.KhattractionGame"] = khattraction.KhattractionGame;
+khattraction.KhattractionGame.__name__ = ["khattraction","KhattractionGame"];
+khattraction.KhattractionGame.__super__ = kha.Game;
+khattraction.KhattractionGame.prototype = $extend(kha.Game.prototype,{
+	init: function() {
+		kha.Configuration.setScreen(new kha.LoadingScreen());
+		kha.math.Random.init(Math.floor(new Date().getTime()));
+		this.backBuffer = kha.Image.createRenderTarget(this.width,this.height);
+		engine.world.WorldManager.createInstance(6,3,200,190);
+		this.bulletLauncher = new khattraction.entities.BulletLauncher(new kha.math.Vector3(200,200,0),new kha.math.Vector3(50,20,0));
+		engine.world.WorldManager.the.spawnEntity(this.bulletLauncher);
+		kha.Loader.the.loadRoom("main",$bind(this,this.loadDone));
+	}
+	,loadDone: function() {
+		kha.Configuration.setScreen(this);
+		khattraction.KhattractionGame.gameBounds = new khattraction.physic.AABB(new kha.math.Vector3(0,0,0),new kha.math.Vector3(this.width,this.height,0));
+		this.inidone = true;
+		haxe.Log.trace("loadDone",{ fileName : "KhattractionGame.hx", lineNumber : 51, className : "khattraction.KhattractionGame", methodName : "loadDone"});
+	}
+	,update: function() {
+		if(!this.inidone) return;
+		if(haxe.Timer.stamp() - this.lastUpdate < 0.033) return;
+		this.lastUpdate = haxe.Timer.stamp();
+		engine.input.Dispatcher.get().update();
+		engine.world.WorldManager.the.update();
+	}
+	,render: function(frame) {
+		if(!this.inidone) return;
+		if(haxe.Timer.stamp() - this.lastRender < 0.033) {
+			this.startRender(frame);
+			kha.Scaler.scale(this.backBuffer,frame,kha.Sys.screenRotation);
+			this.endRender(frame);
+			return;
+		}
+		this.lastRender = haxe.Timer.stamp();
+		var g = this.backBuffer.get_g2();
+		g.begin();
+		g.clear(kha._Color.Color_Impl_.fromBytes(48,48,48,255));
+		engine.world.WorldManager.the.render(g);
+		var _g = 0;
+		var _g1 = engine.world.WorldManager.the.getEntities();
+		while(_g < _g1.length) {
+			var ent = _g1[_g];
+			++_g;
+			ent.render(g);
+		}
+		g.end();
+		this.startRender(frame);
+		kha.Scaler.scale(this.backBuffer,frame,kha.Sys.screenRotation);
+		this.endRender(frame);
+	}
+	,__class__: khattraction.KhattractionGame
+});
+khattraction.entities = {};
+khattraction.entities.Entity = function(position,size) {
+	this.position = position;
+	this.size = size;
+	this.zindex = 0;
+	this.timeAlive = 0;
+};
+$hxClasses["khattraction.entities.Entity"] = khattraction.entities.Entity;
+khattraction.entities.Entity.__name__ = ["khattraction","entities","Entity"];
+khattraction.entities.Entity.prototype = {
+	update: function() {
+		this.timeAlive++;
+	}
+	,render: function(g) {
+	}
+	,__class__: khattraction.entities.Entity
+};
+khattraction.entities.MovingEntity = function(position,size,initialVelocity) {
+	khattraction.entities.Entity.call(this,position,size);
+	this.set_velocity(initialVelocity != null?initialVelocity:new kha.math.Vector3(0,0,0));
+	this.set_acceleration(new kha.math.Vector3(0,0,0));
+};
+$hxClasses["khattraction.entities.MovingEntity"] = khattraction.entities.MovingEntity;
+khattraction.entities.MovingEntity.__name__ = ["khattraction","entities","MovingEntity"];
+khattraction.entities.MovingEntity.__super__ = khattraction.entities.Entity;
+khattraction.entities.MovingEntity.prototype = $extend(khattraction.entities.Entity.prototype,{
+	update: function() {
+		khattraction.entities.Entity.prototype.update.call(this);
+		this.set_velocity(this.get_velocity().add(this.get_acceleration()));
+		this.position = this.position.add(this.get_velocity());
+	}
+	,get_acceleration: function() {
+		return this.acceleration;
+	}
+	,set_acceleration: function(value) {
+		return this.acceleration = value;
+	}
+	,get_velocity: function() {
+		return this.velocity;
+	}
+	,set_velocity: function(value) {
+		return this.velocity = value;
+	}
+	,__class__: khattraction.entities.MovingEntity
+});
+khattraction.entities.Bullet = function(position,size,initialVelocity) {
+	this.speed = 6.0;
+	this.defaultColor = 25358591;
+	this.maxBuffSize = 5;
+	khattraction.entities.MovingEntity.call(this,position,size,initialVelocity.mult(this.speed));
+	this.image = kha.Loader.the.getImage("bullet");
+	this.posBuffer = new Array();
+};
+$hxClasses["khattraction.entities.Bullet"] = khattraction.entities.Bullet;
+khattraction.entities.Bullet.__name__ = ["khattraction","entities","Bullet"];
+khattraction.entities.Bullet.__super__ = khattraction.entities.MovingEntity;
+khattraction.entities.Bullet.prototype = $extend(khattraction.entities.MovingEntity.prototype,{
+	update: function() {
+		khattraction.entities.MovingEntity.prototype.update.call(this);
+		if(this.posBuffer.length > this.maxBuffSize) this.posBuffer.pop();
+		this.posBuffer.splice(0,0,this.position);
+		if(!khattraction.KhattractionGame.gameBounds.collide(khattraction.physic.AABB.AabbFromEntity(this))) engine.world.WorldManager.the.removeEntity(this);
+	}
+	,render: function(g) {
+		g.set_color(this.defaultColor);
+		var _g1 = 0;
+		var _g = this.posBuffer.length;
+		while(_g1 < _g) {
+			var i = _g1++;
+			var pos = this.posBuffer[i];
+			g.set_opacity(1 - i / this.maxBuffSize);
+			g.drawScaledImage(this.image,pos.x,pos.y,this.size.x,this.size.y);
+		}
+		g.set_opacity(1);
+	}
+	,__class__: khattraction.entities.Bullet
+});
+khattraction.entities.BulletLauncher = function(position,size) {
+	this.freq = 0.05;
+	this.lastShoot = 0.0;
+	this.turnSpeed = 3;
+	khattraction.entities.Entity.call(this,position,size);
+	this.angle = 90;
+	engine.input.Dispatcher.get().notify(null,null,$bind(this,this.onKeyPress));
+	this.zindex = 100;
+};
+$hxClasses["khattraction.entities.BulletLauncher"] = khattraction.entities.BulletLauncher;
+khattraction.entities.BulletLauncher.__name__ = ["khattraction","entities","BulletLauncher"];
+khattraction.entities.BulletLauncher.__super__ = khattraction.entities.Entity;
+khattraction.entities.BulletLauncher.prototype = $extend(khattraction.entities.Entity.prototype,{
+	onKeyPress: function(key,str) {
+		if(key == kha.Key.CHAR && str == "z") this.angle += this.turnSpeed;
+		if(key == kha.Key.CHAR && str == "s") this.angle -= this.turnSpeed;
+		if(key == kha.Key.CHAR && str == " ") this.launchBullet();
+	}
+	,launchBullet: function() {
+		if(haxe.Timer.stamp() - this.lastShoot < this.freq) return;
+		this.lastShoot = haxe.Timer.stamp();
+		var bulletVel = new kha.math.Vector3(Math.cos(khattraction.mathutils.Angles.toRadian(this.angle)),Math.sin(khattraction.mathutils.Angles.toRadian(this.angle)),0);
+		var b = new khattraction.entities.Bullet(new kha.math.Vector3(this.position.x,this.position.y,this.position.z),new kha.math.Vector3(8,8,0),bulletVel);
+		engine.world.WorldManager.the.spawnEntity(b);
+	}
+	,update: function() {
+	}
+	,render: function(g) {
+		var _g = 0;
+		while(_g < 1) {
+			var i = _g++;
+			g.set_color(kha._Color.Color_Impl_.fromBytes(10 * i,255 - 20 * i,100));
+			g.set_opacity(0.5);
+			g.setBlendingMode(kha.graphics4.BlendingOperation.BlendOne,kha.graphics4.BlendingOperation.InverseDestinationAlpha);
+			kha.graphics2.GraphicsExtension.fillCircle(g,this.position.x + 5 * i,this.position.y + 10 * i,this.size.x / 2,180);
+			g.pushTranslation(this.position.x + 15 * i,this.position.y + 33 * i);
+			g.pushRotation(khattraction.mathutils.Angles.toRadian(this.angle),this.position.x,this.position.y);
+			g.set_opacity(0.9);
+			g.setBlendingMode(kha.graphics4.BlendingOperation.BlendOne,kha.graphics4.BlendingOperation.InverseSourceAlpha);
+			g.set_color(kha._Color.Color_Impl_.Black);
+			g.fillRect(-this.size.x / 2,-this.size.y / 2,this.size.x,this.size.y);
+			g.popTransformation();
+			g.popTransformation();
+			g.set_opacity(1);
+		}
+	}
+	,__class__: khattraction.entities.BulletLauncher
+});
+khattraction.mathutils = {};
+khattraction.mathutils.Angles = function() { };
+$hxClasses["khattraction.mathutils.Angles"] = khattraction.mathutils.Angles;
+khattraction.mathutils.Angles.__name__ = ["khattraction","mathutils","Angles"];
+khattraction.mathutils.Angles.toDegree = function(angle) {
+	return 180 * angle / 3.14159;
+};
+khattraction.mathutils.Angles.toRadian = function(angle) {
+	return 3.14159 * angle / 180;
+};
+khattraction.physic = {};
+khattraction.physic.AABB = function(position,size) {
+	this.position = position;
+	this.size = size;
+};
+$hxClasses["khattraction.physic.AABB"] = khattraction.physic.AABB;
+khattraction.physic.AABB.__name__ = ["khattraction","physic","AABB"];
+khattraction.physic.AABB.AabbFromEntity = function(ent) {
+	return new khattraction.physic.AABB(ent.position,ent.size);
+};
+khattraction.physic.AABB.prototype = {
+	getCenter: function() {
+		return new kha.math.Vector3((this.position.x + this.size.x) / 2,(this.position.y + this.size.y) / 2,(this.position.z + this.size.z) / 2);
+	}
+	,collide: function(other) {
+		return !(this.position.x > other.position.x + other.size.x || this.position.x + this.size.x < other.position.x || this.position.y > other.position.y + other.size.y || this.position.y + this.size.y < other.position.y || this.position.z > other.position.z + other.size.z || this.position.z + this.size.z < other.position.z);
+	}
+	,contains: function(point) {
+		return !(this.position.x > point.x || this.position.x + this.size.x < point.x || this.position.y > point.y || this.position.y + this.size.y < point.y || this.position.z > point.z || this.position.z + this.size.z < point.z);
+	}
+	,__class__: khattraction.physic.AABB
+};
 function $iterator(o) { if( o instanceof Array ) return function() { return HxOverrides.iter(o); }; return typeof(o.iterator) == 'function' ? $bind(o,o.iterator) : o.iterator; }
 var $_, $fid = 0;
 function $bind(o,m) { if( m == null ) return null; if( m.__id__ == null ) m.__id__ = $fid++; var f; if( o.hx__closures__ == null ) o.hx__closures__ = {}; else f = o.hx__closures__[m.__id__]; if( f == null ) { f = function(){ return f.method.apply(f.scope, arguments); }; f.scope = o; f.method = m; o.hx__closures__[m.__id__] = f; } return f; }
@@ -8980,7 +9204,7 @@ var Bool = $hxClasses.Bool = Boolean;
 Bool.__ename__ = ["Bool"];
 var Class = $hxClasses.Class = { __name__ : ["Class"]};
 var Enum = { };
-kha.Game.FPS = 60;
+engine.utils.Pair.__meta__ = { obj : { generic : null}};
 haxe.Serializer.USE_CACHE = false;
 haxe.Serializer.USE_ENUM_INDEX = false;
 haxe.Serializer.BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789%:";
@@ -8999,6 +9223,7 @@ kha._Color.Color_Impl_.Purple = kha._Color.Color_Impl_._new(-8388480);
 kha._Color.Color_Impl_.Pink = kha._Color.Color_Impl_._new(-16181);
 kha._Color.Color_Impl_.Orange = kha._Color.Color_Impl_._new(-23296);
 kha.Configuration.id = -1;
+kha.Game.FPS = 60;
 kha.FontStyle.Default = new kha.FontStyle(false,false,false);
 kha.Kravur.fontCache = new haxe.ds.StringMap();
 kha.Scheduler.DIF_COUNT = 3;

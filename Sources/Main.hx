@@ -1,11 +1,15 @@
 package ;
 
-import gravity.GravityGame;
 import kha.Starter;
-
+import khattraction.KhattractionGame;
 class Main {
 	public static function main() {
+
+		#if flash
+
+		#end
 		var starter = new Starter();
-		starter.start(new LD31());
+		starter.start(new KhattractionGame());
+
 	}
 }

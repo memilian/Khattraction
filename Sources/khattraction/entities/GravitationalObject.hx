@@ -1,4 +1,4 @@
-package gravity.entities;
+package khattraction.entities;
 
 import kha.math.Vector3;
 

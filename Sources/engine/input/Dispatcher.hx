@@ -1,4 +1,4 @@
-package gravity.input;
+package engine.input;
 
 import kha.input.Mouse;
 import kha.Key;

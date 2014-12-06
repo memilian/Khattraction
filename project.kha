@@ -1,9 +1,9 @@
 {
 	"format": 1,
 	"game": {
-		"name": "LD31",
+		"name": "Khattraction",
 		"width": 1200,
-		"height": 550
+		"height": 570
 	},
 	"assets": [
 		{
@@ -11,6 +11,12 @@
 			"type": "image",
 			"file": "tst.png",
 			"name": "tst"
+		},
+		{
+			"id": "49fcc545-106c-4029-81aa-fa3ad3f1a8e7",
+			"type": "image",
+			"file": "bullet.png",
+			"name": "bullet"
 		}
 	],
 	"rooms": [
@@ -19,7 +25,9 @@
 			"name": "main",
 			"parent": null,
 			"neighbours": [],
-			"assets": []
+			"assets": [
+				"49fcc545-106c-4029-81aa-fa3ad3f1a8e7"
+			]
 		}
 	]
 }

@@ -1,21 +1,22 @@
-package gravity.entities;
+package khattraction.entities;
 
 import kha.math.Vector3;
+
 class MovingEntity extends Entity{
 
     @:isVar public var velocity(get, set):Vector3;
     @:isVar public var acceleration(get, set):Vector3;
 
-    public function new(position:Vector3, size:Vector3) {
+    public function new(position:Vector3, size:Vector3, ?initialVelocity:Vector3) {
         super(position, size);
-        this.velocity = new Vector3(0,0,0);
+        this.velocity = initialVelocity != null ? initialVelocity : new Vector3(0,0,0);
         this.acceleration = new Vector3(0,0,0);
     }
 
-    public function new(position:Vector3, size:Vector3, initialVelocity:Vector3) {
-        super(position, size);
-        this.velocity = initialVelocity;
-        this.acceleration = new Vector3(0,0,0);
+    override public function update(){
+        super.update();
+        velocity = velocity.add(acceleration);
+        position = position.add(velocity);
     }
 
     public function get_acceleration():Vector3 {
@@ -33,5 +34,6 @@ class MovingEntity extends Entity{
     public function set_velocity(value:Vector3) {
         return this.velocity = value;
     }
+
 
 }
