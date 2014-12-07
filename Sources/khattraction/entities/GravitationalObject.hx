@@ -1,5 +1,7 @@
 package khattraction.entities;
 
+import kha.math.Random;
+import motion.Actuate;
 import engine.ui.IResizable;
 import engine.input.Dispatcher;
 import kha.graphics2.GraphicsExtension;
@@ -21,10 +23,34 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
 
 
     public var selected:Bool;
+    public var hover:Bool;
     public var dragging:Bool;
     public var locked : Bool = false;
     public var minSize:Float = 50;
     public var maxSize:Float = 400;
+    @:isVar public var forceRadius(default, default):Float;
+    @:isVar public var forceStrength(default, default):Float;
+    public var inverseStrength : Bool;
+
+    var sine = 0.0;
+
+    var image : Image;
+    var maxInfluence = 5;
+    var center : Vector3;
+    var fxArr : Array<GravObjFx>;
+
+    public function new(position : Vector3, inverseStrength : Bool = false, forceStrength : Float = 30, forceRadius : Float = 90 ) {
+        super(position,new Vector3(60,60,0));
+        zindex = 50;
+        this.forceRadius = forceRadius;
+        this.forceStrength = inverseStrength?forceStrength*-1:forceStrength;
+        this.inverseStrength = (this.forceStrength<0);
+
+        image = Loader.the.getImage("bullet");
+        Dispatcher.get().mouseNotify(mouseDown,mouseUp,onMouseDragged,onMouseMoved,onMouseWheel);
+        fxArr = new Array<GravObjFx>();
+        Actuate.tween(this, 3,{sine:360}).repeat().reflect().smartRotation();
+    }
 
     //Currently broken
     public function onMouseWheel(dw:Int):Void {
@@ -36,6 +62,8 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
         if(locked)
             return;
         if(selected && button == Dispatcher.BUTTON_LEFT){
+            if(!KhattractionGame.gameBounds.contains(new Vector3(position.x+dx, position.y+dy,0)))
+                return;
             position.x += dx;
             position.y += dy;
         }
@@ -53,11 +81,20 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
         if(locked)
             return;
         if(hover && button == Dispatcher.BUTTON_LEFT){
-           selected = true;
+            selected = true;
+        }else if(hover && button == Dispatcher.BUTTON_RIGHT){
+            isDead = true;
+            for(fx in fxArr){
+                fx.ttl = 0;
+                WorldManager.the.removeEntity(fx);
+            }
+            var tmp = new Vector3(0,0,0);
+            Actuate.tween(this, 1, {minSize:1}).onComplete(function(){
+                WorldManager.the.removeEntity(this);
+            });
         }
     }
 
-    public var hover:Bool;
 
     public function onMouseMoved(x:Int, y:Int):Void {
         if(locked)
@@ -68,23 +105,9 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
             hover = false;
     }
 
-    @:isVar public var forceRadius(default, default):Float;
-    @:isVar public var forceStrength(default, default):Float;
-    var image : Image;
-    var maxInfluence = 5;
-    var center : Vector3;
-
-    public function new(position : Vector3, inverseStrength : Bool = false, forceStrength : Float = 30, forceRadius : Float = 90 ) {
-        super(position,new Vector3(60,60,0));
-        zindex = 50;
-        this.forceRadius = forceRadius;
-        this.forceStrength = inverseStrength?forceStrength*-1:forceStrength;
-        image = Loader.the.getImage("bullet");
-        Dispatcher.get().mouseNotify(mouseDown,mouseUp,onMouseDragged,onMouseMoved,onMouseWheel);
-    }
-
     public function applyInfluence(entity : MovingEntity)  {
-
+        if(isDead)
+            return;
         var dstSq = center.distanceSq(entity.position);
         var toMe = center.sub(entity.position);
         var steer = toMe.sub(entity.velocity).mult(forceStrength/(dstSq+1));
@@ -92,11 +115,15 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
             steer.normalize();
             steer = steer.mult(maxInfluence);
         }
-        entity.velocity = entity.velocity.add(steer);
+        if(Type.getClass(entity)==GravObjFx)
+            entity.velocity = entity.velocity.add(steer.mult(inverseStrength?0.1:0.3));
+        else
+            entity.velocity = entity.velocity.add(steer);
     }
 
     override public function update(){
         super.update();
+
         center = AABB.AabbFromEntity(this).getCenter();
         var searchArea = new AABB(new Vector3(position.x-forceRadius, position.y-forceRadius,0), new Vector3(forceRadius*2,2*forceRadius,0));
         var ents = WorldManager.the.getEntitiesInAabb(searchArea, Bullet);
@@ -105,15 +132,56 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
                 applyInfluence(cast(ent,MovingEntity));
             }
         }
+        for(fx in fxArr){
+            if(fx.isDead){
+                fxArr.remove(fx);
+                WorldManager.the.removeEntity(fx);
+            }
+            applyInfluence(fx);
+        }
+        if(isDead)
+            return;
+        var radius = inverseStrength?5:size.x;
+        var angle = sine/5;
+        var sineRatio = sine/360;
+        for(i in 0...5){
+
+            var pos = center.add(new Vector3(
+                (Math.cos(angle*(i+1)) * radius),
+                (Math.sin(angle*(i+1)) * radius),
+                0
+            ));
+            var baseSize = inverseStrength?15:1;
+            var nfx = new GravObjFx(pos,new Vector3(baseSize,baseSize,0));
+
+            if(inverseStrength)
+
+                nfx.color = Color.fromBytes(Std.int(255-100*sineRatio),Std.int(155+100*sineRatio),0);
+            else
+                nfx.color = Color.fromBytes(0,Std.int(255-100*sineRatio),Std.int(155+100*sineRatio));
+
+            nfx.ttl = 1.0;
+            WorldManager.the.spawnEntity(nfx);
+            fxArr.push(nfx);
+            Actuate.tween(nfx.size,4,{x:inverseStrength?1:15});
+            Actuate.tween(nfx.size,4,{y:inverseStrength?1:15});
+        }
     }
 
     override public function render(g : Graphics){
-        g.pushOpacity(0.8);
+        if(isDead)
+            return;
+        g.pushOpacity(0.2);
         g.set_color(Color.Green);
 
+        //g.drawScaledImage(image, position.x, position.y, size.x, size.y);
+        if(hover)
+            g.drawCircle(center.x,center.y, forceRadius);
+/*
         g.drawScaledImage(image, position.x, position.y, size.x, size.y);
         if(hover)
             g.drawCircle(center.x,center.y, forceRadius);
+            */
         g.popOpacity();
     }
 }

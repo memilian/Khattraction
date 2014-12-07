@@ -1,4 +1,5 @@
 package khattraction.entities;
+import engine.physic.AABB;
 import khattraction.level.LevelManager;
 import engine.world.WorldManager;
 import kha.graphics2.GraphicsExtension;
@@ -26,22 +27,23 @@ class Target extends Entity{
     }
 
     override public function render(g:Graphics){
+        var center = AABB.AabbFromEntity(this).getCenter();
 
         if(life<0){
             var deathRatio : Float = (1.0*deadCounter)/(1.0*maxDeadCounter);
 
 
             g.set_color(Color.fromBytes(100+Std.int(deathRatio*155), 255-Std.int(deathRatio*150), 100-Std.int(deathRatio*100),255-Std.int(255*deathRatio)));
-            for(i in 0...10){
-                var dAngle  = i*Math.PI*0.05*deathRatio+(Math.PI/5);
-                g.fillCircle(position.x+deathRatio*Math.cos(dAngle * i) * 50,
-                position.y+deathRatio*Math.sin(dAngle * i) * 50,
-                size.x-size.x*deathRatio);
+            for(i in 0...50){
+                var dAngle  = i*Math.PI*0.01*deathRatio+(Math.PI/5);
+                g.fillCircle(center.x+deathRatio*Math.cos(dAngle * i) * 150,
+                center.y+deathRatio*Math.sin(dAngle * i) * 150,
+                size.x/2-size.x/2*deathRatio);
 
             }
         }else{
             g.set_color(Color.Purple);
-            g.fillCircle(position.x,position.y,size.x);
+            g.fillCircle(center.x,center.y,size.x/2);
         }
     }
 

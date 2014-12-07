@@ -15,7 +15,7 @@ class MovingEntity extends Entity{
 
     override public function update(){
         super.update();
-        velocity = velocity.add(acceleration);
+        //velocity = velocity.add(acceleration);
         position = position.add(velocity);
     }
 

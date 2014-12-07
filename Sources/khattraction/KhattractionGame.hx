@@ -33,7 +33,6 @@ class KhattractionGame extends Game {
 	var lastRender : Float = 0;
 	var inidone = false;
 
-	var blackHole : GravitationalObject;
 
 	public static var gameBounds : AABB;
 	var menu : Menu;
@@ -41,6 +40,7 @@ class KhattractionGame extends Game {
 	public function new() {
 		super("Khattraction", false);
 		instance = this;
+		Random.init(17);
 	}
 
 	override public function init(): Void {
@@ -58,8 +58,7 @@ class KhattractionGame extends Game {
 		//initLevel();
 		LevelManager.loadLevel(1);
 		menu = new IGMenu();
-		blackHole = new GravitationalObject(new Vector3(20,20,0), true, 40, 50);
-		blackHole.locked = true;
+
 		inidone = true;
 	}
 
@@ -73,7 +72,6 @@ class KhattractionGame extends Game {
 		menu.update();
 		Dispatcher.get().update();
 		WorldManager.the.update();
-		blackHole.update();
 	}
 
 	override public function render(frame : Framebuffer) : Void {
@@ -94,7 +92,6 @@ class KhattractionGame extends Game {
 		g.begin();
 		g.clear(Color.fromBytes(48,48,48,255));
 		WorldManager.the.render(g);
-		blackHole.render(g);
 //	g.setBlendingMode(BlendingOperation.BlendOne, BlendingOperation.InverseDestinationAlpha);
 	//	g.setBlendingMode(BlendingOperation.BlendOne, BlendingOperation.BlendOne);
 	//	g.setBlendingMode(BlendingOperation.SourceAlpha, BlendingOperation.InverseSourceAlpha);

@@ -79,8 +79,8 @@ class WorldManager {
     }
 
     public function getCoordFromPos(pos : Vector3){
-        var coordX = Math.round(pos.x/partWidth);
-        var coordY = Math.round(pos.y/partHeight);
+        var coordX = Math.floor(pos.x/partWidth);
+        var coordY = Math.floor(pos.y/partHeight);
         return new Pair(coordX,coordY);
     }
 
@@ -129,7 +129,7 @@ class WorldManager {
             return false;
     }
 
-    public function getEntitiesInAabb(aabb, type : Class<Entity>){
+    public function getEntitiesInAabb(aabb, type : Class<Entity>) : Array<Entity>{
         var it = worldParts.keys();
         var res = new Array();
         while(it.hasNext()){

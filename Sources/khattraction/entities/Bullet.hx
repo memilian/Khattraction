@@ -1,4 +1,5 @@
 package khattraction.entities;
+import motion.Actuate;
 import engine.physic.AABB;
 import khattraction.mathutils.Utils;
 import engine.physic.AABB;
@@ -19,16 +20,18 @@ class Bullet  extends MovingEntity{
     var maxBuffSize = 5;
     var deadCounter = 0;
     var maxDeadCounter = 60;
-    var maxTimeAlive : Int = 600;
+    var maxTimeAlive : Int = 200;
     var defaultColor = Color.fromBytes(130,240,255,1);
     var speed = 6.0;
     var damage = 1.0;
+    static var sine = 0.0;
     public var shouldBeDead = false;
 
     public function new(position:Vector3, size:Vector3, initialVelocity:Vector3) {
         super(position, size, initialVelocity == null?new Vector3(0,0,0):initialVelocity.mult(speed));
         image = Loader.the.getImage("bullet");
         posBuffer = new Array<Vector3>();
+        Actuate.tween(this,3,{sine:360}).repeat().reflect().smartRotation();
     }
 
     public function equal(o){
@@ -57,7 +60,7 @@ class Bullet  extends MovingEntity{
             posBuffer.pop();
         posBuffer.insert(0,position);
 
-        if(!KhattractionGame.gameBounds.contains(AABB.AabbFromEntity(this).getCenter())){
+        if(!KhattractionGame.gameBounds.contains(position)){
             isDead = true;
             while(WorldManager.the.getPartForEntity(this) == null){
                 position = position.sub(velocity); //Stay in world part
@@ -73,7 +76,7 @@ class Bullet  extends MovingEntity{
         var targets = WorldManager.the.getEntitiesInAabb(AABB.AabbFromEntity(this).expand(50), Target);
         for(t in targets){
             if(AABB.AabbFromEntity(this).collide(AABB.AabbFromEntity(t)))
-                if(position.distance(t.position)<(t.size.x*2+size.x*2)/2){
+                if(position.distance(t.position)<(t.size.x)){
                     cast(t,Target).takeDamage(damage);
                     isDead = true;
                 }
@@ -108,7 +111,7 @@ class Bullet  extends MovingEntity{
 
         g.set_color(Color.fromBytes(100+Std.int(deathRatio*155), 255-Std.int(deathRatio*150), 100-Std.int(deathRatio*100),255-Std.int(255*deathRatio)));
         for(i in 0...10){
-            var dAngle  = i*Math.PI*0.05*deathRatio+(Math.PI/5);
+            var dAngle  = i*Math.PI*0.05*deathRatio+(sine/5);
             g.drawScaledImage(image,position.x+deathRatio*Math.cos(dAngle * i) * 50,
                                     position.y+deathRatio*Math.sin(dAngle * i) * 50,
                                     size.x-size.x*deathRatio,
