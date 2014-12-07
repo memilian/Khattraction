@@ -173,6 +173,14 @@ Reflect.field = function(o,field) {
 Reflect.setField = function(o,field,value) {
 	o[field] = value;
 };
+Reflect.getProperty = function(o,field) {
+	var tmp;
+	if(o == null) return null; else if(o.__properties__ && (tmp = o.__properties__["get_" + field])) return o[tmp](); else return o[field];
+};
+Reflect.setProperty = function(o,field,value) {
+	var tmp;
+	if(o.__properties__ && (tmp = o.__properties__["set_" + field])) o[tmp](value); else o[field] = value;
+};
 Reflect.fields = function(o) {
 	var a = [];
 	if(o != null) {
@@ -356,13 +364,24 @@ Type["typeof"] = function(v) {
 var engine = {};
 engine.input = {};
 engine.input.Dispatcher = function() {
+	this.buttonRightState = false;
+	this.buttonLeftState = false;
+	this.prevMouseY = 0;
+	this.prevMouseX = 0;
 	this.keyboard = kha.input.Keyboard.get(0);
+	this.mouse = kha.input.Mouse.get(0);
 	this.keyboard.notify($bind(this,this.onKeyDown),$bind(this,this.onKeyUp));
 	this.pressListeners = new Array();
 	this.downListeners = new Array();
 	this.upListeners = new Array();
 	this.keyStates = new haxe.ds.EnumValueMap();
 	this.keyCharStates = new haxe.ds.StringMap();
+	this.mouse.notify($bind(this,this.onMouseDown),$bind(this,this.onMouseUp),$bind(this,this.onMouseMove),$bind(this,this.onMouseWheel));
+	this.mouseDownListeners = new Array();
+	this.mouseUpListeners = new Array();
+	this.mouseDragListeners = new Array();
+	this.mouseMoveListeners = new Array();
+	this.mouseWheelListeners = new Array();
 };
 $hxClasses["engine.input.Dispatcher"] = engine.input.Dispatcher;
 engine.input.Dispatcher.__name__ = ["engine","input","Dispatcher"];
@@ -382,6 +401,13 @@ engine.input.Dispatcher.prototype = {
 			var $char = $it1.next();
 			if(this.keyCharStates.get($char)) this.onKeyPress(kha.Key.CHAR,$char);
 		}
+	}
+	,mouseNotify: function(downListener,upListener,dragListener,moveListener,wheelListener) {
+		if(downListener != null) this.mouseDownListeners.push(downListener);
+		if(upListener != null) this.mouseUpListeners.push(upListener);
+		if(dragListener != null) this.mouseDragListeners.push(dragListener);
+		if(moveListener != null) this.mouseMoveListeners.push(moveListener);
+		if(wheelListener != null) this.mouseWheelListeners.push(wheelListener);
 	}
 	,notify: function(downListener,upListener,pressListener) {
 		if(downListener != null) this.downListeners.push(downListener);
@@ -434,8 +460,249 @@ engine.input.Dispatcher.prototype = {
 			this.keyStates.set(key,false);
 		}
 	}
+	,onMouseUp: function(button,x,y) {
+		var _g = 0;
+		var _g1 = this.mouseUpListeners;
+		while(_g < _g1.length) {
+			var listener = _g1[_g];
+			++_g;
+			listener(button,x,y);
+		}
+		if(button == engine.input.Dispatcher.BUTTON_RIGHT) this.buttonRightState = false; else this.buttonLeftState = false;
+	}
+	,onMouseDown: function(button,x,y) {
+		var _g = 0;
+		var _g1 = this.mouseDownListeners;
+		while(_g < _g1.length) {
+			var listener = _g1[_g];
+			++_g;
+			listener(button,x,y);
+		}
+		if(button == engine.input.Dispatcher.BUTTON_RIGHT) this.buttonRightState = true; else this.buttonLeftState = true;
+	}
+	,onMouseMove: function(x,y) {
+		var _g = 0;
+		var _g1 = this.mouseMoveListeners;
+		while(_g < _g1.length) {
+			var listener = _g1[_g];
+			++_g;
+			listener(x,y);
+		}
+		if(this.buttonLeftState) {
+			var _g2 = 0;
+			var _g11 = this.mouseDragListeners;
+			while(_g2 < _g11.length) {
+				var listener1 = _g11[_g2];
+				++_g2;
+				listener1(engine.input.Dispatcher.BUTTON_LEFT,x - this.prevMouseX,y - this.prevMouseY);
+			}
+		}
+		if(this.buttonRightState) {
+			var _g3 = 0;
+			var _g12 = this.mouseDragListeners;
+			while(_g3 < _g12.length) {
+				var listener2 = _g12[_g3];
+				++_g3;
+				listener2(engine.input.Dispatcher.BUTTON_RIGHT,x - this.prevMouseX,y - this.prevMouseY);
+			}
+		}
+		this.prevMouseX = x;
+		this.prevMouseY = y;
+	}
+	,onMouseWheel: function(dw) {
+		var _g = 0;
+		var _g1 = this.mouseWheelListeners;
+		while(_g < _g1.length) {
+			var listener = _g1[_g];
+			++_g;
+			listener(dw);
+		}
+	}
 	,__class__: engine.input.Dispatcher
 };
+engine.physic = {};
+engine.physic.AABB = function(position,size) {
+	this.position = position;
+	this.size = size;
+};
+$hxClasses["engine.physic.AABB"] = engine.physic.AABB;
+engine.physic.AABB.__name__ = ["engine","physic","AABB"];
+engine.physic.AABB.AabbFromEntity = function(ent) {
+	return new engine.physic.AABB(ent.position,ent.size);
+};
+engine.physic.AABB.prototype = {
+	update: function(pos,size) {
+		this.position = pos;
+		this.size = size;
+	}
+	,expand: function(amount) {
+		return new engine.physic.AABB(new kha.math.Vector3(this.position.x - amount / 2,this.position.y - amount / 2,0),new kha.math.Vector3(this.size.x + amount / 2,this.size.y + amount / 2));
+	}
+	,getCenter: function() {
+		return new kha.math.Vector3(this.position.x + this.size.x / 2,this.position.y + this.size.y / 2,this.position.z + this.size.z / 2);
+	}
+	,collide: function(other) {
+		return !(this.position.x > other.position.x + other.size.x || this.position.x + this.size.x < other.position.x || this.position.y > other.position.y + other.size.y || this.position.y + this.size.y < other.position.y || this.position.z > other.position.z + other.size.z || this.position.z + this.size.z < other.position.z);
+	}
+	,contains: function(point) {
+		return !(this.position.x > point.x || this.position.x + this.size.x < point.x || this.position.y > point.y || this.position.y + this.size.y < point.y || this.position.z > point.z || this.position.z + this.size.z < point.z);
+	}
+	,__class__: engine.physic.AABB
+};
+engine.ui = {};
+engine.ui.UIElement = function(parent,pos,size) {
+	this.parent = parent;
+	this.position = pos;
+	this.size = size;
+	this.bgColor = kha._Color.Color_Impl_.White;
+	this.bounds = new engine.physic.AABB(this.get_realPosition(),size);
+};
+$hxClasses["engine.ui.UIElement"] = engine.ui.UIElement;
+engine.ui.UIElement.__name__ = ["engine","ui","UIElement"];
+engine.ui.UIElement.prototype = {
+	update: function() {
+	}
+	,render: function(g) {
+		g.set_color(this.bgColor);
+	}
+	,setPosition: function(x,y,z) {
+		this.position.x = x;
+		this.position.y = y;
+		this.position.z = z;
+		return this;
+	}
+	,setSize: function(w,h) {
+		this.size.x = w;
+		this.size.y = h;
+		return this;
+	}
+	,get_realPosition: function() {
+		if(this.parent == null) return this.position;
+		return this.parent.get_realPosition().add(this.position);
+	}
+	,__class__: engine.ui.UIElement
+	,__properties__: {get_realPosition:"get_realPosition"}
+};
+engine.ui.IDisplayText = function() { };
+$hxClasses["engine.ui.IDisplayText"] = engine.ui.IDisplayText;
+engine.ui.IDisplayText.__name__ = ["engine","ui","IDisplayText"];
+engine.ui.IDisplayText.prototype = {
+	__class__: engine.ui.IDisplayText
+};
+engine.ui.IClickable = function() { };
+$hxClasses["engine.ui.IClickable"] = engine.ui.IClickable;
+engine.ui.IClickable.__name__ = ["engine","ui","IClickable"];
+engine.ui.IClickable.prototype = {
+	__class__: engine.ui.IClickable
+};
+engine.ui.IHoverable = function() { };
+$hxClasses["engine.ui.IHoverable"] = engine.ui.IHoverable;
+engine.ui.IHoverable.__name__ = ["engine","ui","IHoverable"];
+engine.ui.IHoverable.prototype = {
+	__class__: engine.ui.IHoverable
+};
+engine.ui.Button = function(parent,pos,size,text) {
+	this.active = false;
+	engine.ui.UIElement.call(this,parent,pos,size);
+	if(text == null) this.text = "Click me !"; else this.text = text;
+	engine.input.Dispatcher.get().mouseNotify($bind(this,this.onMouseDown),$bind(this,this.onMouseUp),null,$bind(this,this.onMouseMoved),null);
+	this.font = kha.Loader.the.loadFont("Roboto",new kha.FontStyle(false,false,false),18);
+	this.onClick = function() {
+	};
+};
+$hxClasses["engine.ui.Button"] = engine.ui.Button;
+engine.ui.Button.__name__ = ["engine","ui","Button"];
+engine.ui.Button.__interfaces__ = [engine.ui.IDisplayText,engine.ui.IClickable,engine.ui.IHoverable];
+engine.ui.Button.create = function(parent) {
+	return new engine.ui.Button(parent,new kha.math.Vector3(0,0,0),new kha.math.Vector3(0,0,0));
+};
+engine.ui.Button.__super__ = engine.ui.UIElement;
+engine.ui.Button.prototype = $extend(engine.ui.UIElement.prototype,{
+	setOnClick: function(onclick) {
+		this.onClick = onclick;
+		return this;
+	}
+	,setPosition: function(x,y,z) {
+		engine.ui.UIElement.prototype.setPosition.call(this,x,y,z);
+		return this;
+	}
+	,setSize: function(w,h) {
+		engine.ui.UIElement.prototype.setSize.call(this,w,h);
+		return this;
+	}
+	,setText: function(text) {
+		this.text = text;
+		return this;
+	}
+	,onMouseMoved: function(x,y) {
+		this.hover = this.bounds.contains(new kha.math.Vector3(x,y,0));
+	}
+	,onMouseDown: function(button,x,y) {
+		if(this.bounds.contains(new kha.math.Vector3(x,y,0))) this.active = true;
+	}
+	,onMouseUp: function(button,x,y) {
+		this.active = false;
+		if(this.bounds.contains(new kha.math.Vector3(x,y,0))) this.onClick();
+	}
+	,update: function() {
+		this.bounds.update(this.get_realPosition(),this.size);
+	}
+	,render: function(g) {
+		engine.ui.UIElement.prototype.render.call(this,g);
+		g.set_font(this.font);
+		g.set_color(this.active?kha._Color.Color_Impl_.Red:this.hover?kha._Color.Color_Impl_.Blue:kha._Color.Color_Impl_.Green);
+		g.fillRect(this.get_realPosition().x,this.get_realPosition().y,this.size.x,this.size.y);
+		g.set_color(kha._Color.Color_Impl_.Black);
+		var textW = this.font.stringWidth(this.text);
+		var tX = this.bounds.getCenter().x - textW / 2;
+		var tY = this.bounds.getCenter().y - this.font.getHeight() / 2;
+		g.drawString(this.text,tX,tY);
+	}
+	,__class__: engine.ui.Button
+});
+engine.ui.IPlaceable = function() { };
+$hxClasses["engine.ui.IPlaceable"] = engine.ui.IPlaceable;
+engine.ui.IPlaceable.__name__ = ["engine","ui","IPlaceable"];
+engine.ui.IPlaceable.prototype = {
+	__class__: engine.ui.IPlaceable
+};
+engine.ui.Menu = function(parent,pos,size) {
+	engine.ui.UIElement.call(this,parent,pos,size);
+	this.children = new Array();
+	this.bgColor = kha._Color.Color_Impl_.fromBytes(96,96,96,128);
+	engine.input.Dispatcher.get().mouseNotify(null,null,null,$bind(this,this.onMouseMoved),null);
+};
+$hxClasses["engine.ui.Menu"] = engine.ui.Menu;
+engine.ui.Menu.__name__ = ["engine","ui","Menu"];
+engine.ui.Menu.__interfaces__ = [engine.ui.IHoverable];
+engine.ui.Menu.__super__ = engine.ui.UIElement;
+engine.ui.Menu.prototype = $extend(engine.ui.UIElement.prototype,{
+	update: function() {
+		this.bounds.update(this.position,this.size);
+		var _g = 0;
+		var _g1 = this.children;
+		while(_g < _g1.length) {
+			var elm = _g1[_g];
+			++_g;
+			elm.update();
+		}
+	}
+	,render: function(g) {
+		engine.ui.UIElement.prototype.render.call(this,g);
+		g.set_opacity(this.hover?1:0.5);
+		g.fillRect(this.position.x,this.position.y,this.size.x,this.size.y);
+		var _g = 0;
+		var _g1 = this.children;
+		while(_g < _g1.length) {
+			var elm = _g1[_g];
+			++_g;
+			elm.render(g);
+		}
+	}
+	,onMouseMoved: function(x,y) {
+	}
+	,__class__: engine.ui.Menu
+});
 engine.utils = {};
 engine.utils.Pair = function(x,y) {
 	this.x = x;
@@ -468,7 +735,7 @@ engine.world.WorldManager = function(partCountX,partCountY,partWidth,partHeight)
 		while(_g1 < partCountY) {
 			var y = _g1++;
 			var coords = new engine.utils.Pair(x,y);
-			var bounds = new khattraction.physic.AABB(new kha.math.Vector3(x * partWidth,y * partHeight,0),partSize);
+			var bounds = new engine.physic.AABB(new kha.math.Vector3(x * partWidth,y * partHeight,0),partSize);
 			var value = new engine.world.WorldPart(bounds,coords);
 			this.worldParts.set(coords,value);
 		}
@@ -523,7 +790,7 @@ engine.world.WorldManager.prototype = {
 		}(this))).render(g);
 	}
 	,getPartForEntity: function(ent) {
-		var coord = this.getCoordFromPos(khattraction.physic.AABB.AabbFromEntity(ent).getCenter());
+		var coord = this.getCoordFromPos(engine.physic.AABB.AabbFromEntity(ent).getCenter());
 		if(!(this.worldParts.h.__keys__[coord.__id__] != null)) return null;
 		var part = this.worldParts.h[coord.__id__];
 		return part;
@@ -590,7 +857,7 @@ engine.world.WorldPart.prototype = {
 			var ent = _g1[_g];
 			++_g;
 			ent.update();
-			if(!this.bounds.contains(khattraction.physic.AABB.AabbFromEntity(ent).getCenter())) {
+			if(!this.bounds.contains(engine.physic.AABB.AabbFromEntity(ent).getCenter())) {
 				this.entitiesToRemove.push(ent);
 				if(!engine.world.WorldManager.the.placeLater(ent)) this.entitiesToRemove.push(ent);
 			}
@@ -895,11 +1162,21 @@ haxe.Serializer.prototype = {
 	}
 	,__class__: haxe.Serializer
 };
-haxe.Timer = function() { };
+haxe.Timer = function(time_ms) {
+	var me = this;
+	this.id = setInterval(function() {
+		me.run();
+	},time_ms);
+};
 $hxClasses["haxe.Timer"] = haxe.Timer;
 haxe.Timer.__name__ = ["haxe","Timer"];
 haxe.Timer.stamp = function() {
 	return new Date().getTime() / 1000;
+};
+haxe.Timer.prototype = {
+	run: function() {
+	}
+	,__class__: haxe.Timer
 };
 haxe.Unserializer = function(buf) {
 	this.buf = buf;
@@ -1462,12 +1739,33 @@ haxe.ds.ObjectMap.prototype = {
 		this.h[id] = value;
 		this.h.__keys__[id] = key;
 	}
+	,get: function(key) {
+		return this.h[key.__id__];
+	}
+	,exists: function(key) {
+		return this.h.__keys__[key.__id__] != null;
+	}
+	,remove: function(key) {
+		var id = key.__id__;
+		if(this.h.__keys__[id] == null) return false;
+		delete(this.h[id]);
+		delete(this.h.__keys__[id]);
+		return true;
+	}
 	,keys: function() {
 		var a = [];
 		for( var key in this.h.__keys__ ) {
 		if(this.h.hasOwnProperty(key)) a.push(this.h.__keys__[key]);
 		}
 		return HxOverrides.iter(a);
+	}
+	,iterator: function() {
+		return { ref : this.h, it : this.keys(), hasNext : function() {
+			return this.it.hasNext();
+		}, next : function() {
+			var i = this.it.next();
+			return this.ref[i.__id__];
+		}};
 	}
 	,__class__: haxe.ds.ObjectMap
 };
@@ -2012,6 +2310,7 @@ kha.Image = function() { };
 $hxClasses["kha.Image"] = kha.Image;
 kha.Image.__name__ = ["kha","Image"];
 kha.Image.__interfaces__ = [kha.Resource,kha.Canvas];
+kha.Image.__properties__ = {get_nonPow2Supported:"get_nonPow2Supported",get_maxSize:"get_maxSize"}
 kha.Image.create = function(width,height,format,usage,levels) {
 	if(levels == null) levels = 1;
 	if(format == null) format = kha.graphics4.TextureFormat.RGBA32;
@@ -2087,6 +2386,7 @@ kha.Image.prototype = {
 		return null;
 	}
 	,__class__: kha.Image
+	,__properties__: {get_g4:"get_g4",get_g2:"get_g2",get_realHeight:"get_realHeight",get_realWidth:"get_realWidth",get_height:"get_height",get_width:"get_width"}
 };
 kha.CanvasImage = function(width,height,format,renderTarget) {
 	this.g2canvas = null;
@@ -2585,6 +2885,7 @@ kha._Color = {};
 kha._Color.Color_Impl_ = function() { };
 $hxClasses["kha._Color.Color_Impl_"] = kha._Color.Color_Impl_;
 kha._Color.Color_Impl_.__name__ = ["kha","_Color","Color_Impl_"];
+kha._Color.Color_Impl_.__properties__ = {set_value:"set_value",get_value:"get_value",set_A:"set_A",get_A:"get_A",set_B:"set_B",get_B:"get_B",set_G:"set_G",get_G:"get_G",set_R:"set_R",get_R:"get_R",set_Ab:"set_Ab",get_Ab:"get_Ab",set_Bb:"set_Bb",get_Bb:"get_Bb",set_Gb:"set_Gb",get_Gb:"get_Gb",set_Rb:"set_Rb",get_Rb:"get_Rb"}
 kha._Color.Color_Impl_.fromValue = function(value) {
 	return kha._Color.Color_Impl_._new(value);
 };
@@ -2871,6 +3172,7 @@ kha.Framebuffer.prototype = {
 		return kha.Sys.get_pixelHeight();
 	}
 	,__class__: kha.Framebuffer
+	,__properties__: {get_height:"get_height",get_width:"get_width",get_g4:"get_g4",get_g2:"get_g2"}
 };
 kha.HighscoreList = function() {
 	this.scores = [];
@@ -3071,6 +3373,7 @@ kha.Kravur.prototype = {
 		return this.baseline;
 	}
 	,__class__: kha.Kravur
+	,__properties__: {get_size:"get_size",get_style:"get_style",get_name:"get_name"}
 };
 kha.Loader = $hx_exports.kha.Loader = function() {
 	this.basePath = ".";
@@ -3799,6 +4102,7 @@ kha.Scene = function() {
 };
 $hxClasses["kha.Scene"] = kha.Scene;
 kha.Scene.__name__ = ["kha","Scene"];
+kha.Scene.__properties__ = {get_the:"get_the"}
 kha.Scene.get_the = function() {
 	if(kha.Scene.instance == null) kha.Scene.instance = new kha.Scene();
 	return kha.Scene.instance;
@@ -4034,6 +4338,7 @@ kha.Scene.prototype = {
 		return sprites;
 	}
 	,__class__: kha.Scene
+	,__properties__: {set_camy:"set_camy",set_camx:"set_camx"}
 };
 kha.TimeTask = function() {
 };
@@ -4062,6 +4367,7 @@ kha.FrameTask.prototype = {
 kha.Scheduler = function() { };
 $hxClasses["kha.Scheduler"] = kha.Scheduler;
 kha.Scheduler.__name__ = ["kha","Scheduler"];
+kha.Scheduler.__properties__ = {set_deltaScale:"set_deltaScale",get_deltaScale:"get_deltaScale",get_deltaTime:"get_deltaTime"}
 kha.Scheduler.init = function() {
 	kha.Scheduler.difs = new Array();
 	var _g1 = 0;
@@ -4338,6 +4644,7 @@ kha.ScreenCanvas = function() {
 $hxClasses["kha.ScreenCanvas"] = kha.ScreenCanvas;
 kha.ScreenCanvas.__name__ = ["kha","ScreenCanvas"];
 kha.ScreenCanvas.__interfaces__ = [kha.Canvas];
+kha.ScreenCanvas.__properties__ = {get_the:"get_the"}
 kha.ScreenCanvas.get_the = function() {
 	if(kha.ScreenCanvas.instance == null) kha.ScreenCanvas.instance = new kha.ScreenCanvas();
 	return kha.ScreenCanvas.instance;
@@ -4356,6 +4663,7 @@ kha.ScreenCanvas.prototype = {
 		return null;
 	}
 	,__class__: kha.ScreenCanvas
+	,__properties__: {get_g4:"get_g4",get_g2:"get_g2",get_height:"get_height",get_width:"get_width"}
 };
 kha.ScreenRotation = $hxClasses["kha.ScreenRotation"] = { __ename__ : ["kha","ScreenRotation"], __constructs__ : ["RotationNone","Rotation90","Rotation180","Rotation270"] };
 kha.ScreenRotation.RotationNone = ["RotationNone",0];
@@ -4486,6 +4794,7 @@ kha.Sprite.prototype = {
 		return this.h = value;
 	}
 	,__class__: kha.Sprite
+	,__properties__: {set_height:"set_height",get_height:"get_height",set_width:"set_width",get_width:"get_width"}
 };
 kha.GamepadStates = function() {
 	this.axes = new Array();
@@ -4968,6 +5277,7 @@ kha.StorageFile.prototype = {
 kha.Sys = function() { };
 $hxClasses["kha.Sys"] = kha.Sys;
 kha.Sys.__name__ = ["kha","Sys"];
+kha.Sys.__properties__ = {get_pixelHeight:"get_pixelHeight",get_pixelWidth:"get_pixelWidth",get_mouse:"get_mouse"}
 kha.Sys.init = function(canvas) {
 	kha.Sys.khanvas = canvas;
 	kha.Sys.theMouse = new kha.js.Mouse();
@@ -5477,6 +5787,7 @@ kha.graphics2.Graphics.prototype = {
 	,setProgram: function(program) {
 	}
 	,__class__: kha.graphics2.Graphics
+	,__properties__: {set_program:"set_program",get_program:"get_program",set_opacity:"set_opacity",get_opacity:"get_opacity",set_transformation:"set_transformation",get_transformation:"get_transformation",set_font:"set_font",get_font:"get_font",set_color:"set_color",get_color:"get_color"}
 };
 kha.graphics2.GraphicsExtension = function() { };
 $hxClasses["kha.graphics2.GraphicsExtension"] = kha.graphics2.GraphicsExtension;
@@ -5763,6 +6074,7 @@ kha.graphics4.ImageShaderPainter.prototype = {
 		this.lastTexture = null;
 	}
 	,__class__: kha.graphics4.ImageShaderPainter
+	,__properties__: {set_program:"set_program",get_program:"get_program"}
 };
 kha.graphics4.ColoredShaderPainter = function(g4) {
 	this.destinationBlend = kha.graphics4.BlendingOperation.Undefined;
@@ -5936,6 +6248,7 @@ kha.graphics4.ColoredShaderPainter.prototype = {
 		this.endRects(false);
 	}
 	,__class__: kha.graphics4.ColoredShaderPainter
+	,__properties__: {set_program:"set_program",get_program:"get_program"}
 };
 kha.graphics4.TextShaderPainter = function(g4) {
 	this.destinationBlend = kha.graphics4.BlendingOperation.Undefined;
@@ -6177,6 +6490,7 @@ kha.graphics4.TextShaderPainter.prototype = {
 		this.lastTexture = null;
 	}
 	,__class__: kha.graphics4.TextShaderPainter
+	,__properties__: {set_program:"set_program",get_program:"get_program"}
 };
 kha.graphics4.Graphics2 = function(canvas) {
 	kha.graphics2.Graphics.call(this);
@@ -7678,6 +7992,7 @@ kha.js.Font.prototype = {
 		return this.images.get(color);
 	}
 	,__class__: kha.js.Font
+	,__properties__: {get_size:"get_size",get_style:"get_style",get_name:"get_name"}
 };
 kha.js.Loader = function() {
 	kha.Loader.call(this);
@@ -8896,6 +9211,7 @@ kha.math.Vector2.prototype = {
 		this.y *= l;
 	}
 	,__class__: kha.math.Vector2
+	,__properties__: {set_length:"set_length",get_length:"get_length"}
 };
 kha.math.Vector2i = function(x,y) {
 	if(y == null) y = 0;
@@ -8955,6 +9271,7 @@ kha.math.Vector3.prototype = {
 		this.z *= l;
 	}
 	,__class__: kha.math.Vector3
+	,__properties__: {set_length:"set_length",get_length:"get_length"}
 };
 kha.math.Vector4 = function(x,y,z,w) {
 	if(w == null) w = 1;
@@ -9024,6 +9341,7 @@ kha.math.Vector4.prototype = {
 		return new kha.math.Vector4(this.get_x() * value,this.get_y() * value,this.get_z() * value);
 	}
 	,__class__: kha.math.Vector4
+	,__properties__: {set_length:"set_length",get_length:"get_length",set_w:"set_w",get_w:"get_w",set_z:"set_z",get_z:"get_z",set_y:"set_y",get_y:"get_y",set_x:"set_x",get_x:"get_x"}
 };
 var khattraction = {};
 khattraction.KhattractionGame = function() {
@@ -9040,24 +9358,30 @@ khattraction.KhattractionGame.prototype = $extend(kha.Game.prototype,{
 	init: function() {
 		kha.Configuration.setScreen(new kha.LoadingScreen());
 		kha.math.Random.init(Math.floor(new Date().getTime()));
+		kha.Loader.the.loadRoom("main",$bind(this,this.loadDone));
 		this.backBuffer = kha.Image.createRenderTarget(this.width,this.height);
 		engine.world.WorldManager.createInstance(6,3,200,190);
-		this.bulletLauncher = new khattraction.entities.BulletLauncher(new kha.math.Vector3(200,200,0),new kha.math.Vector3(50,20,0));
-		engine.world.WorldManager.the.spawnEntity(this.bulletLauncher);
-		var wall = new khattraction.entities.Wall(new kha.math.Vector3(500,0,0),new kha.math.Vector3(20,100,0));
-		engine.world.WorldManager.the.spawnEntity(wall);
-		kha.Loader.the.loadRoom("main",$bind(this,this.loadDone));
 	}
 	,loadDone: function() {
 		kha.Configuration.setScreen(this);
-		khattraction.KhattractionGame.gameBounds = new khattraction.physic.AABB(new kha.math.Vector3(0,0,0),new kha.math.Vector3(this.width,this.height,0));
+		khattraction.KhattractionGame.gameBounds = new engine.physic.AABB(new kha.math.Vector3(0,0,0),new kha.math.Vector3(this.width,this.height,0));
 		this.inidone = true;
-		haxe.Log.trace("loadDone",{ fileName : "KhattractionGame.hx", lineNumber : 54, className : "khattraction.KhattractionGame", methodName : "loadDone"});
+		this.initLevel();
+		this.menu = new khattraction.ui.IGMenu();
+	}
+	,initLevel: function() {
+		this.bulletLauncher = new khattraction.entities.BulletLauncher(new kha.math.Vector3(200,200,0),new kha.math.Vector3(50,20,0));
+		engine.world.WorldManager.the.spawnEntity(this.bulletLauncher);
+		var wall = new khattraction.entities.Wall(new kha.math.Vector3(500,0,0),new kha.math.Vector3(20,800,0));
+		engine.world.WorldManager.the.spawnEntity(wall);
+		var attr = new khattraction.entities.GravitationalObject(new kha.math.Vector3(500,200,0));
+		engine.world.WorldManager.the.spawnEntity(attr);
 	}
 	,update: function() {
 		if(!this.inidone) return;
 		if(haxe.Timer.stamp() - this.lastUpdate < 0.033) return;
 		this.lastUpdate = haxe.Timer.stamp();
+		this.menu.update();
 		engine.input.Dispatcher.get().update();
 		engine.world.WorldManager.the.update();
 	}
@@ -9081,10 +9405,14 @@ khattraction.KhattractionGame.prototype = $extend(kha.Game.prototype,{
 			++_g;
 			ent.render(g);
 		}
+		this.menu.render(g);
 		g.end();
 		this.startRender(frame);
 		kha.Scaler.scale(this.backBuffer,frame,kha.Sys.screenRotation);
 		this.endRender(frame);
+	}
+	,getHeight: function() {
+		return this.height;
 	}
 	,__class__: khattraction.KhattractionGame
 });
@@ -9132,6 +9460,7 @@ khattraction.entities.MovingEntity.prototype = $extend(khattraction.entities.Ent
 		return this.velocity = value;
 	}
 	,__class__: khattraction.entities.MovingEntity
+	,__properties__: {set_acceleration:"set_acceleration",get_acceleration:"get_acceleration",set_velocity:"set_velocity",get_velocity:"get_velocity"}
 });
 khattraction.entities.Bullet = function(position,size,initialVelocity) {
 	this.speed = 6.0;
@@ -9140,7 +9469,7 @@ khattraction.entities.Bullet = function(position,size,initialVelocity) {
 	this.maxDeadCounter = 60;
 	this.deadCounter = 0;
 	this.maxBuffSize = 5;
-	khattraction.entities.MovingEntity.call(this,position,size,initialVelocity.mult(this.speed));
+	khattraction.entities.MovingEntity.call(this,position,size,initialVelocity == null?new kha.math.Vector3(0,0,0):initialVelocity.mult(this.speed));
 	this.image = kha.Loader.the.getImage("bullet");
 	this.posBuffer = new Array();
 };
@@ -9158,16 +9487,16 @@ khattraction.entities.Bullet.prototype = $extend(khattraction.entities.MovingEnt
 		khattraction.entities.MovingEntity.prototype.update.call(this);
 		if(this.posBuffer.length > this.maxBuffSize) this.posBuffer.pop();
 		this.posBuffer.splice(0,0,this.position);
-		if(!khattraction.KhattractionGame.gameBounds.collide(khattraction.physic.AABB.AabbFromEntity(this))) {
+		if(!khattraction.KhattractionGame.gameBounds.collide(engine.physic.AABB.AabbFromEntity(this))) {
 			this.isDead = true;
 			this.position = this.position.sub(this.get_velocity());
 		}
-		var walls = engine.world.WorldManager.the.getEntitiesInAabb(khattraction.physic.AABB.AabbFromEntity(this).expand(50),khattraction.entities.Wall);
+		var walls = engine.world.WorldManager.the.getEntitiesInAabb(engine.physic.AABB.AabbFromEntity(this).expand(50),khattraction.entities.Wall);
 		var _g = 0;
 		while(_g < walls.length) {
 			var wall = walls[_g];
 			++_g;
-			if(khattraction.physic.AABB.AabbFromEntity(this).collide(khattraction.physic.AABB.AabbFromEntity(wall))) this.isDead = true;
+			if(engine.physic.AABB.AabbFromEntity(this).collide(engine.physic.AABB.AabbFromEntity(wall))) this.isDead = true;
 		}
 	}
 	,render: function(g) {
@@ -9228,7 +9557,7 @@ khattraction.entities.BulletLauncher.prototype = $extend(khattraction.entities.E
 	,launchBullet: function() {
 		if(haxe.Timer.stamp() - this.lastShoot < this.freq) return;
 		this.lastShoot = haxe.Timer.stamp();
-		var bulletVel = new kha.math.Vector3(Math.cos(khattraction.mathutils.Angles.toRadian(this.angle)),Math.sin(khattraction.mathutils.Angles.toRadian(this.angle)),0);
+		var bulletVel = new kha.math.Vector3(Math.cos(khattraction.mathutils.Utils.toRadian(this.angle)),Math.sin(khattraction.mathutils.Utils.toRadian(this.angle)),0);
 		var b = new khattraction.entities.Bullet(new kha.math.Vector3(this.position.x,this.position.y,this.position.z),new kha.math.Vector3(8,8,0),bulletVel);
 		engine.world.WorldManager.the.spawnEntity(b);
 	}
@@ -9243,7 +9572,7 @@ khattraction.entities.BulletLauncher.prototype = $extend(khattraction.entities.E
 			g.setBlendingMode(kha.graphics4.BlendingOperation.BlendOne,kha.graphics4.BlendingOperation.InverseDestinationAlpha);
 			kha.graphics2.GraphicsExtension.fillCircle(g,this.position.x + 5 * i,this.position.y + 10 * i,this.size.x / 2,180);
 			g.pushTranslation(this.position.x + 15 * i,this.position.y + 33 * i);
-			g.pushRotation(khattraction.mathutils.Angles.toRadian(this.angle),this.position.x,this.position.y);
+			g.pushRotation(khattraction.mathutils.Utils.toRadian(this.angle),this.position.x,this.position.y);
 			g.set_opacity(0.9);
 			g.setBlendingMode(kha.graphics4.BlendingOperation.BlendOne,kha.graphics4.BlendingOperation.InverseSourceAlpha);
 			g.set_color(kha._Color.Color_Impl_.Black);
@@ -9254,6 +9583,65 @@ khattraction.entities.BulletLauncher.prototype = $extend(khattraction.entities.E
 		}
 	}
 	,__class__: khattraction.entities.BulletLauncher
+});
+khattraction.entities.GravitationalObject = function(position,forceStrength,forceRadius) {
+	if(forceRadius == null) forceRadius = 200;
+	if(forceStrength == null) forceStrength = 40;
+	this.maxInfluence = 5;
+	khattraction.entities.Entity.call(this,position,new kha.math.Vector3(60,60,0));
+	this.forceRadius = forceRadius;
+	this.forceStrength = forceStrength;
+	this.image = kha.Loader.the.getImage("bullet");
+	engine.input.Dispatcher.get().mouseNotify($bind(this,this.mouseDown),$bind(this,this.mouseUp),$bind(this,this.onMouseDragged),$bind(this,this.onMouseMoved),null);
+};
+$hxClasses["khattraction.entities.GravitationalObject"] = khattraction.entities.GravitationalObject;
+khattraction.entities.GravitationalObject.__name__ = ["khattraction","entities","GravitationalObject"];
+khattraction.entities.GravitationalObject.__interfaces__ = [engine.ui.IHoverable,engine.ui.IPlaceable];
+khattraction.entities.GravitationalObject.__super__ = khattraction.entities.Entity;
+khattraction.entities.GravitationalObject.prototype = $extend(khattraction.entities.Entity.prototype,{
+	onMouseDragged: function(button,dx,dy) {
+		if(this.selected && button == engine.input.Dispatcher.BUTTON_LEFT) {
+			this.position.x += dx;
+			this.position.y += dy;
+		}
+	}
+	,mouseUp: function(button,x,y) {
+		if(this.selected) this.selected = false;
+	}
+	,mouseDown: function(button,x,y) {
+		if(this.hover && button == engine.input.Dispatcher.BUTTON_LEFT) this.selected = true;
+	}
+	,onMouseMoved: function(x,y) {
+		if(engine.physic.AABB.AabbFromEntity(this).contains(new kha.math.Vector3(x,y))) this.hover = true; else this.hover = false;
+	}
+	,applyInfluence: function(entity) {
+		var dstSq = khattraction.mathutils.Utils.distanceSq(this.center,entity.position);
+		var toMe = this.center.sub(entity.position);
+		var steer = toMe.sub(entity.get_velocity()).mult(this.forceStrength / (dstSq + 1));
+		if(steer.get_length() > this.maxInfluence) {
+			steer.normalize();
+			steer = steer.mult(this.maxInfluence);
+		}
+		entity.set_velocity(entity.get_velocity().add(steer));
+	}
+	,update: function() {
+		khattraction.entities.Entity.prototype.update.call(this);
+		this.center = engine.physic.AABB.AabbFromEntity(this).getCenter();
+		var searchArea = new engine.physic.AABB(new kha.math.Vector3(this.position.x - this.forceRadius,this.position.y - this.forceRadius,0),new kha.math.Vector3(this.forceRadius * 2,2 * this.forceRadius,0));
+		var ents = engine.world.WorldManager.the.getEntitiesInAabb(searchArea,khattraction.entities.Bullet);
+		var _g = 0;
+		while(_g < ents.length) {
+			var ent = ents[_g];
+			++_g;
+			if(khattraction.mathutils.Utils.distance(this.center,ent.position) <= this.forceRadius) this.applyInfluence(js.Boot.__cast(ent , khattraction.entities.MovingEntity));
+		}
+	}
+	,render: function(g) {
+		g.set_color(kha._Color.Color_Impl_.Green);
+		g.drawScaledImage(this.image,this.position.x,this.position.y,this.size.x,this.size.y);
+		if(this.hover) kha.graphics2.GraphicsExtension.drawCircle(g,this.center.x,this.center.y,this.forceRadius);
+	}
+	,__class__: khattraction.entities.GravitationalObject
 });
 khattraction.entities.Wall = function(position,size) {
 	khattraction.entities.Entity.call(this,position,size);
@@ -9272,39 +9660,901 @@ khattraction.entities.Wall.prototype = $extend(khattraction.entities.Entity.prot
 	,__class__: khattraction.entities.Wall
 });
 khattraction.mathutils = {};
-khattraction.mathutils.Angles = function() { };
-$hxClasses["khattraction.mathutils.Angles"] = khattraction.mathutils.Angles;
-khattraction.mathutils.Angles.__name__ = ["khattraction","mathutils","Angles"];
-khattraction.mathutils.Angles.toDegree = function(angle) {
+khattraction.mathutils.Utils = function() { };
+$hxClasses["khattraction.mathutils.Utils"] = khattraction.mathutils.Utils;
+khattraction.mathutils.Utils.__name__ = ["khattraction","mathutils","Utils"];
+khattraction.mathutils.Utils.toDegree = function(angle) {
 	return 180 * angle / 3.14159;
 };
-khattraction.mathutils.Angles.toRadian = function(angle) {
+khattraction.mathutils.Utils.toRadian = function(angle) {
 	return 3.14159 * angle / 180;
 };
-khattraction.physic = {};
-khattraction.physic.AABB = function(position,size) {
-	this.position = position;
-	this.size = size;
+khattraction.mathutils.Utils.distance = function(v,v2) {
+	var vec = v.sub(v2);
+	return Math.sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
 };
-$hxClasses["khattraction.physic.AABB"] = khattraction.physic.AABB;
-khattraction.physic.AABB.__name__ = ["khattraction","physic","AABB"];
-khattraction.physic.AABB.AabbFromEntity = function(ent) {
-	return new khattraction.physic.AABB(ent.position,ent.size);
+khattraction.mathutils.Utils.distanceSq = function(v,v2) {
+	var vec = v.sub(v2);
+	return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z;
 };
-khattraction.physic.AABB.prototype = {
-	expand: function(amount) {
-		return new khattraction.physic.AABB(new kha.math.Vector3(this.position.x - amount / 2,this.position.y - amount / 2,0),new kha.math.Vector3(this.size.x + amount / 2,this.size.y + amount / 2));
+khattraction.ui = {};
+khattraction.ui.IGMenu = function() {
+	this.gameHeight = khattraction.KhattractionGame.instance.height;
+	this.gameWidth = khattraction.KhattractionGame.instance.width;
+	engine.ui.Menu.call(this,null,new kha.math.Vector3(0,this.gameHeight - 100,0),new kha.math.Vector3(this.gameWidth,100,0));
+	var helpBtn = engine.ui.Button.create(this).setPosition(this.gameWidth - 60,10,0).setSize(50,20).setText("Help ?");
+	this.children.push(helpBtn);
+};
+$hxClasses["khattraction.ui.IGMenu"] = khattraction.ui.IGMenu;
+khattraction.ui.IGMenu.__name__ = ["khattraction","ui","IGMenu"];
+khattraction.ui.IGMenu.__super__ = engine.ui.Menu;
+khattraction.ui.IGMenu.prototype = $extend(engine.ui.Menu.prototype,{
+	update: function() {
+		engine.ui.Menu.prototype.update.call(this);
 	}
-	,getCenter: function() {
-		return new kha.math.Vector3((this.position.x + this.size.x) / 2,(this.position.y + this.size.y) / 2,(this.position.z + this.size.z) / 2);
+	,render: function(g) {
+		engine.ui.Menu.prototype.render.call(this,g);
 	}
-	,collide: function(other) {
-		return !(this.position.x > other.position.x + other.size.x || this.position.x + this.size.x < other.position.x || this.position.y > other.position.y + other.size.y || this.position.y + this.size.y < other.position.y || this.position.z > other.position.z + other.size.z || this.position.z + this.size.z < other.position.z);
+	,onMouseMoved: function(x,y) {
+		this.hover = this.bounds.contains(new kha.math.Vector3(x,y,0));
+		motion.Actuate.tween(this.position,0.5,{ y : this.hover?khattraction.KhattractionGame.instance.height - 100:khattraction.KhattractionGame.instance.height - 20}).ease(motion.easing.Linear.get_easeNone());
 	}
-	,contains: function(point) {
-		return !(this.position.x > point.x || this.position.x + this.size.x < point.x || this.position.y > point.y || this.position.y + this.size.y < point.y || this.position.z > point.z || this.position.z + this.size.z < point.z);
+	,__class__: khattraction.ui.IGMenu
+});
+var motion = {};
+motion.actuators = {};
+motion.actuators.IGenericActuator = function() { };
+$hxClasses["motion.actuators.IGenericActuator"] = motion.actuators.IGenericActuator;
+motion.actuators.IGenericActuator.__name__ = ["motion","actuators","IGenericActuator"];
+motion.actuators.IGenericActuator.prototype = {
+	__class__: motion.actuators.IGenericActuator
+};
+motion.actuators.GenericActuator = function(target,duration,properties) {
+	this._autoVisible = true;
+	this._delay = 0;
+	this._reflect = false;
+	this._repeat = 0;
+	this._reverse = false;
+	this._smartRotation = false;
+	this._snapping = false;
+	this.special = false;
+	this.target = target;
+	this.properties = properties;
+	this.duration = duration;
+	this._ease = motion.Actuate.defaultEase;
+};
+$hxClasses["motion.actuators.GenericActuator"] = motion.actuators.GenericActuator;
+motion.actuators.GenericActuator.__name__ = ["motion","actuators","GenericActuator"];
+motion.actuators.GenericActuator.__interfaces__ = [motion.actuators.IGenericActuator];
+motion.actuators.GenericActuator.prototype = {
+	apply: function() {
+		var _g = 0;
+		var _g1 = Reflect.fields(this.properties);
+		while(_g < _g1.length) {
+			var i = _g1[_g];
+			++_g;
+			if(Object.prototype.hasOwnProperty.call(this.target,i)) Reflect.setField(this.target,i,Reflect.field(this.properties,i)); else Reflect.setProperty(this.target,i,Reflect.field(this.properties,i));
+		}
 	}
-	,__class__: khattraction.physic.AABB
+	,autoVisible: function(value) {
+		if(value == null) value = true;
+		this._autoVisible = value;
+		return this;
+	}
+	,callMethod: function(method,params) {
+		if(params == null) params = [];
+		return method.apply(method,params);
+	}
+	,change: function() {
+		if(this._onUpdate != null) this.callMethod(this._onUpdate,this._onUpdateParams);
+	}
+	,complete: function(sendEvent) {
+		if(sendEvent == null) sendEvent = true;
+		if(sendEvent) {
+			this.change();
+			if(this._onComplete != null) this.callMethod(this._onComplete,this._onCompleteParams);
+		}
+		motion.Actuate.unload(this);
+	}
+	,delay: function(duration) {
+		this._delay = duration;
+		return this;
+	}
+	,ease: function(easing) {
+		this._ease = easing;
+		return this;
+	}
+	,move: function() {
+	}
+	,onComplete: function(handler,parameters) {
+		this._onComplete = handler;
+		if(parameters == null) this._onCompleteParams = []; else this._onCompleteParams = parameters;
+		if(this.duration == 0) this.complete();
+		return this;
+	}
+	,onRepeat: function(handler,parameters) {
+		this._onRepeat = handler;
+		if(parameters == null) this._onRepeatParams = []; else this._onRepeatParams = parameters;
+		return this;
+	}
+	,onUpdate: function(handler,parameters) {
+		this._onUpdate = handler;
+		if(parameters == null) this._onUpdateParams = []; else this._onUpdateParams = parameters;
+		return this;
+	}
+	,pause: function() {
+	}
+	,reflect: function(value) {
+		if(value == null) value = true;
+		this._reflect = value;
+		this.special = true;
+		return this;
+	}
+	,repeat: function(times) {
+		if(times == null) times = -1;
+		this._repeat = times;
+		return this;
+	}
+	,resume: function() {
+	}
+	,reverse: function(value) {
+		if(value == null) value = true;
+		this._reverse = value;
+		this.special = true;
+		return this;
+	}
+	,smartRotation: function(value) {
+		if(value == null) value = true;
+		this._smartRotation = value;
+		this.special = true;
+		return this;
+	}
+	,snapping: function(value) {
+		if(value == null) value = true;
+		this._snapping = value;
+		this.special = true;
+		return this;
+	}
+	,stop: function(properties,complete,sendEvent) {
+	}
+	,__class__: motion.actuators.GenericActuator
+};
+motion.actuators.SimpleActuator = function(target,duration,properties) {
+	this.active = true;
+	this.propertyDetails = new Array();
+	this.sendChange = false;
+	this.paused = false;
+	this.cacheVisible = false;
+	this.initialized = false;
+	this.setVisible = false;
+	this.toggleVisible = false;
+	this.startTime = haxe.Timer.stamp();
+	motion.actuators.GenericActuator.call(this,target,duration,properties);
+	if(!motion.actuators.SimpleActuator.addedEvent) {
+		motion.actuators.SimpleActuator.addedEvent = true;
+		motion.actuators.SimpleActuator.timer = new haxe.Timer(33);
+		motion.actuators.SimpleActuator.timer.run = motion.actuators.SimpleActuator.stage_onEnterFrame;
+	}
+};
+$hxClasses["motion.actuators.SimpleActuator"] = motion.actuators.SimpleActuator;
+motion.actuators.SimpleActuator.__name__ = ["motion","actuators","SimpleActuator"];
+motion.actuators.SimpleActuator.stage_onEnterFrame = function() {
+	var currentTime = haxe.Timer.stamp();
+	var actuator;
+	var j = 0;
+	var cleanup = false;
+	var _g1 = 0;
+	var _g = motion.actuators.SimpleActuator.actuatorsLength;
+	while(_g1 < _g) {
+		var i = _g1++;
+		actuator = motion.actuators.SimpleActuator.actuators[j];
+		if(actuator != null && actuator.active) {
+			if(currentTime > actuator.timeOffset) actuator.update(currentTime);
+			j++;
+		} else {
+			motion.actuators.SimpleActuator.actuators.splice(j,1);
+			--motion.actuators.SimpleActuator.actuatorsLength;
+		}
+	}
+};
+motion.actuators.SimpleActuator.__super__ = motion.actuators.GenericActuator;
+motion.actuators.SimpleActuator.prototype = $extend(motion.actuators.GenericActuator.prototype,{
+	autoVisible: function(value) {
+		if(value == null) value = true;
+		this._autoVisible = value;
+		if(!value) {
+			this.toggleVisible = false;
+			if(this.setVisible) this.setField(this.target,"visible",this.cacheVisible);
+		}
+		return this;
+	}
+	,delay: function(duration) {
+		this._delay = duration;
+		this.timeOffset = this.startTime + duration;
+		return this;
+	}
+	,getField: function(target,propertyName) {
+		var value = null;
+		if(Object.prototype.hasOwnProperty.call(target,propertyName)) value = Reflect.field(target,propertyName); else value = Reflect.getProperty(target,propertyName);
+		return value;
+	}
+	,initialize: function() {
+		var details;
+		var start;
+		var _g = 0;
+		var _g1 = Reflect.fields(this.properties);
+		while(_g < _g1.length) {
+			var i = _g1[_g];
+			++_g;
+			var isField = true;
+			if(Object.prototype.hasOwnProperty.call(this.target,i)) start = Reflect.field(this.target,i); else {
+				isField = false;
+				start = Reflect.getProperty(this.target,i);
+			}
+			if(typeof(start) == "number") {
+				details = new motion.actuators.PropertyDetails(this.target,i,start,this.getField(this.properties,i) - start,isField);
+				this.propertyDetails.push(details);
+			}
+		}
+		this.detailsLength = this.propertyDetails.length;
+		this.initialized = true;
+	}
+	,move: function() {
+		this.toggleVisible = Object.prototype.hasOwnProperty.call(this.properties,"alpha") && Object.prototype.hasOwnProperty.call(this.properties,"visible");
+		if(this.toggleVisible && this.properties.alpha != 0 && !this.getField(this.target,"visible")) {
+			this.setVisible = true;
+			this.cacheVisible = this.getField(this.target,"visible");
+			this.setField(this.target,"visible",true);
+		}
+		this.timeOffset = this.startTime;
+		motion.actuators.SimpleActuator.actuators.push(this);
+		++motion.actuators.SimpleActuator.actuatorsLength;
+	}
+	,onUpdate: function(handler,parameters) {
+		this._onUpdate = handler;
+		if(parameters == null) this._onUpdateParams = []; else this._onUpdateParams = parameters;
+		this.sendChange = true;
+		return this;
+	}
+	,pause: function() {
+		this.paused = true;
+		this.pauseTime = haxe.Timer.stamp();
+	}
+	,resume: function() {
+		if(this.paused) {
+			this.paused = false;
+			this.timeOffset += (haxe.Timer.stamp() - this.pauseTime) / 1000;
+		}
+	}
+	,setField: function(target,propertyName,value) {
+		if(Object.prototype.hasOwnProperty.call(target,propertyName)) target[propertyName] = value; else Reflect.setProperty(target,propertyName,value);
+	}
+	,setProperty: function(details,value) {
+		if(details.isField) details.target[details.propertyName] = value; else Reflect.setProperty(details.target,details.propertyName,value);
+	}
+	,stop: function(properties,complete,sendEvent) {
+		if(this.active) {
+			if(properties == null) {
+				this.active = false;
+				if(complete) this.apply();
+				this.complete(sendEvent);
+				return;
+			}
+			var _g = 0;
+			var _g1 = Reflect.fields(properties);
+			while(_g < _g1.length) {
+				var i = _g1[_g];
+				++_g;
+				if(Object.prototype.hasOwnProperty.call(this.properties,i)) {
+					this.active = false;
+					if(complete) this.apply();
+					this.complete(sendEvent);
+					return;
+				}
+			}
+		}
+	}
+	,update: function(currentTime) {
+		if(!this.paused) {
+			var details;
+			var easing;
+			var i;
+			var tweenPosition = (currentTime - this.timeOffset) / this.duration;
+			if(tweenPosition > 1) tweenPosition = 1;
+			if(!this.initialized) this.initialize();
+			if(!this.special) {
+				easing = this._ease.calculate(tweenPosition);
+				var _g1 = 0;
+				var _g = this.detailsLength;
+				while(_g1 < _g) {
+					var i1 = _g1++;
+					details = this.propertyDetails[i1];
+					this.setProperty(details,details.start + details.change * easing);
+				}
+			} else {
+				if(!this._reverse) easing = this._ease.calculate(tweenPosition); else easing = this._ease.calculate(1 - tweenPosition);
+				var endValue;
+				var _g11 = 0;
+				var _g2 = this.detailsLength;
+				while(_g11 < _g2) {
+					var i2 = _g11++;
+					details = this.propertyDetails[i2];
+					if(this._smartRotation && (details.propertyName == "rotation" || details.propertyName == "rotationX" || details.propertyName == "rotationY" || details.propertyName == "rotationZ")) {
+						var rotation = details.change % 360;
+						if(rotation > 180) rotation -= 360; else if(rotation < -180) rotation += 360;
+						endValue = details.start + rotation * easing;
+					} else endValue = details.start + details.change * easing;
+					if(!this._snapping) {
+						if(details.isField) details.target[details.propertyName] = endValue; else Reflect.setProperty(details.target,details.propertyName,endValue);
+					} else this.setProperty(details,Math.round(endValue));
+				}
+			}
+			if(tweenPosition == 1) {
+				if(this._repeat == 0) {
+					this.active = false;
+					if(this.toggleVisible && this.getField(this.target,"alpha") == 0) this.setField(this.target,"visible",false);
+					this.complete(true);
+					return;
+				} else {
+					if(this._onRepeat != null) this.callMethod(this._onRepeat,this._onRepeatParams);
+					if(this._reflect) this._reverse = !this._reverse;
+					this.startTime = currentTime;
+					this.timeOffset = this.startTime + this._delay;
+					if(this._repeat > 0) this._repeat--;
+				}
+			}
+			if(this.sendChange) this.change();
+		}
+	}
+	,__class__: motion.actuators.SimpleActuator
+});
+motion.easing = {};
+motion.easing.Expo = function() { };
+$hxClasses["motion.easing.Expo"] = motion.easing.Expo;
+motion.easing.Expo.__name__ = ["motion","easing","Expo"];
+motion.easing.Expo.__properties__ = {get_easeOut:"get_easeOut",get_easeInOut:"get_easeInOut",get_easeIn:"get_easeIn"}
+motion.easing.Expo.get_easeIn = function() {
+	return new motion.easing.ExpoEaseIn();
+};
+motion.easing.Expo.get_easeInOut = function() {
+	return new motion.easing.ExpoEaseInOut();
+};
+motion.easing.Expo.get_easeOut = function() {
+	return new motion.easing.ExpoEaseOut();
+};
+motion.easing.IEasing = function() { };
+$hxClasses["motion.easing.IEasing"] = motion.easing.IEasing;
+motion.easing.IEasing.__name__ = ["motion","easing","IEasing"];
+motion.easing.IEasing.prototype = {
+	__class__: motion.easing.IEasing
+};
+motion.easing.ExpoEaseOut = function() {
+};
+$hxClasses["motion.easing.ExpoEaseOut"] = motion.easing.ExpoEaseOut;
+motion.easing.ExpoEaseOut.__name__ = ["motion","easing","ExpoEaseOut"];
+motion.easing.ExpoEaseOut.__interfaces__ = [motion.easing.IEasing];
+motion.easing.ExpoEaseOut.prototype = {
+	calculate: function(k) {
+		if(k == 1) return 1; else return 1 - Math.pow(2,-10 * k);
+	}
+	,ease: function(t,b,c,d) {
+		if(t == d) return b + c; else return c * (1 - Math.pow(2,-10 * t / d)) + b;
+	}
+	,__class__: motion.easing.ExpoEaseOut
+};
+motion.Actuate = function() { };
+$hxClasses["motion.Actuate"] = motion.Actuate;
+motion.Actuate.__name__ = ["motion","Actuate"];
+motion.Actuate.apply = function(target,properties,customActuator) {
+	motion.Actuate.stop(target,properties);
+	if(customActuator == null) customActuator = motion.Actuate.defaultActuator;
+	var actuator = Type.createInstance(customActuator,[target,0,properties]);
+	actuator.apply();
+	return actuator;
+};
+motion.Actuate.getLibrary = function(target,allowCreation) {
+	if(allowCreation == null) allowCreation = true;
+	if(!motion.Actuate.targetLibraries.exists(target) && allowCreation) motion.Actuate.targetLibraries.set(target,new Array());
+	return motion.Actuate.targetLibraries.get(target);
+};
+motion.Actuate.motionPath = function(target,duration,properties,overwrite) {
+	if(overwrite == null) overwrite = true;
+	return motion.Actuate.tween(target,duration,properties,overwrite,motion.actuators.MotionPathActuator);
+};
+motion.Actuate.pause = function(target) {
+	if(js.Boot.__instanceof(target,motion.actuators.GenericActuator)) (js.Boot.__cast(target , motion.actuators.GenericActuator)).pause(); else {
+		var library = motion.Actuate.getLibrary(target,false);
+		if(library != null) {
+			var _g = 0;
+			while(_g < library.length) {
+				var actuator = library[_g];
+				++_g;
+				actuator.pause();
+			}
+		}
+	}
+};
+motion.Actuate.pauseAll = function() {
+	var $it0 = motion.Actuate.targetLibraries.iterator();
+	while( $it0.hasNext() ) {
+		var library = $it0.next();
+		var _g = 0;
+		while(_g < library.length) {
+			var actuator = library[_g];
+			++_g;
+			actuator.pause();
+		}
+	}
+};
+motion.Actuate.reset = function() {
+	var $it0 = motion.Actuate.targetLibraries.iterator();
+	while( $it0.hasNext() ) {
+		var library = $it0.next();
+		var i = library.length - 1;
+		while(i >= 0) {
+			library[i].stop(null,false,false);
+			i--;
+		}
+	}
+	motion.Actuate.targetLibraries = new haxe.ds.ObjectMap();
+};
+motion.Actuate.resume = function(target) {
+	if(js.Boot.__instanceof(target,motion.actuators.GenericActuator)) (js.Boot.__cast(target , motion.actuators.GenericActuator)).resume(); else {
+		var library = motion.Actuate.getLibrary(target,false);
+		if(library != null) {
+			var _g = 0;
+			while(_g < library.length) {
+				var actuator = library[_g];
+				++_g;
+				actuator.resume();
+			}
+		}
+	}
+};
+motion.Actuate.resumeAll = function() {
+	var $it0 = motion.Actuate.targetLibraries.iterator();
+	while( $it0.hasNext() ) {
+		var library = $it0.next();
+		var _g = 0;
+		while(_g < library.length) {
+			var actuator = library[_g];
+			++_g;
+			actuator.resume();
+		}
+	}
+};
+motion.Actuate.stop = function(target,properties,complete,sendEvent) {
+	if(sendEvent == null) sendEvent = true;
+	if(complete == null) complete = false;
+	if(target != null) {
+		if(js.Boot.__instanceof(target,motion.actuators.GenericActuator)) (js.Boot.__cast(target , motion.actuators.GenericActuator)).stop(null,complete,sendEvent); else {
+			var library = motion.Actuate.getLibrary(target,false);
+			if(library != null) {
+				if(typeof(properties) == "string") {
+					var temp = { };
+					Reflect.setField(temp,properties,null);
+					properties = temp;
+				} else if((properties instanceof Array) && properties.__enum__ == null) {
+					var temp1 = { };
+					var _g = 0;
+					var _g1;
+					_g1 = js.Boot.__cast(properties , Array);
+					while(_g < _g1.length) {
+						var property = _g1[_g];
+						++_g;
+						Reflect.setField(temp1,property,null);
+					}
+					properties = temp1;
+				}
+				var i = library.length - 1;
+				while(i >= 0) {
+					library[i].stop(properties,complete,sendEvent);
+					i--;
+				}
+			}
+		}
+	}
+};
+motion.Actuate.timer = function(duration,customActuator) {
+	return motion.Actuate.tween(new motion._Actuate.TweenTimer(0),duration,new motion._Actuate.TweenTimer(1),false,customActuator);
+};
+motion.Actuate.tween = function(target,duration,properties,overwrite,customActuator) {
+	if(overwrite == null) overwrite = true;
+	if(target != null) {
+		if(duration > 0) {
+			if(customActuator == null) customActuator = motion.Actuate.defaultActuator;
+			var actuator = Type.createInstance(customActuator,[target,duration,properties]);
+			var library = motion.Actuate.getLibrary(actuator.target);
+			if(overwrite) {
+				var i = library.length - 1;
+				while(i >= 0) {
+					library[i].stop(actuator.properties,false,false);
+					i--;
+				}
+				library = motion.Actuate.getLibrary(actuator.target);
+			}
+			library.push(actuator);
+			actuator.move();
+			return actuator;
+		} else return motion.Actuate.apply(target,properties,customActuator);
+	}
+	return null;
+};
+motion.Actuate.unload = function(actuator) {
+	var target = actuator.target;
+	if(motion.Actuate.targetLibraries.h.__keys__[target.__id__] != null) {
+		HxOverrides.remove(motion.Actuate.targetLibraries.h[target.__id__],actuator);
+		if(motion.Actuate.targetLibraries.h[target.__id__].length == 0) motion.Actuate.targetLibraries.remove(target);
+	}
+};
+motion.Actuate.update = function(target,duration,start,end,overwrite) {
+	if(overwrite == null) overwrite = true;
+	var properties = { start : start, end : end};
+	return motion.Actuate.tween(target,duration,properties,overwrite,motion.actuators.MethodActuator);
+};
+motion._Actuate = {};
+motion._Actuate.TweenTimer = function(progress) {
+	this.progress = progress;
+};
+$hxClasses["motion._Actuate.TweenTimer"] = motion._Actuate.TweenTimer;
+motion._Actuate.TweenTimer.__name__ = ["motion","_Actuate","TweenTimer"];
+motion._Actuate.TweenTimer.prototype = {
+	__class__: motion._Actuate.TweenTimer
+};
+motion.MotionPath = function() {
+	this._x = new motion.ComponentPath();
+	this._y = new motion.ComponentPath();
+	this._rotation = null;
+};
+$hxClasses["motion.MotionPath"] = motion.MotionPath;
+motion.MotionPath.__name__ = ["motion","MotionPath"];
+motion.MotionPath.prototype = {
+	bezier: function(x,y,controlX,controlY,strength) {
+		if(strength == null) strength = 1;
+		this._x.addPath(new motion.BezierPath(x,controlX,strength));
+		this._y.addPath(new motion.BezierPath(y,controlY,strength));
+		return this;
+	}
+	,line: function(x,y,strength) {
+		if(strength == null) strength = 1;
+		this._x.addPath(new motion.LinearPath(x,strength));
+		this._y.addPath(new motion.LinearPath(y,strength));
+		return this;
+	}
+	,get_rotation: function() {
+		if(this._rotation == null) this._rotation = new motion.RotationPath(this._x,this._y);
+		return this._rotation;
+	}
+	,get_x: function() {
+		return this._x;
+	}
+	,get_y: function() {
+		return this._y;
+	}
+	,__class__: motion.MotionPath
+	,__properties__: {get_y:"get_y",get_x:"get_x",get_rotation:"get_rotation"}
+};
+motion.IComponentPath = function() { };
+$hxClasses["motion.IComponentPath"] = motion.IComponentPath;
+motion.IComponentPath.__name__ = ["motion","IComponentPath"];
+motion.IComponentPath.prototype = {
+	__class__: motion.IComponentPath
+};
+motion.ComponentPath = function() {
+	this.paths = new Array();
+	this.start = 0;
+	this.totalStrength = 0;
+};
+$hxClasses["motion.ComponentPath"] = motion.ComponentPath;
+motion.ComponentPath.__name__ = ["motion","ComponentPath"];
+motion.ComponentPath.__interfaces__ = [motion.IComponentPath];
+motion.ComponentPath.prototype = {
+	addPath: function(path) {
+		this.paths.push(path);
+		this.totalStrength += path.strength;
+	}
+	,calculate: function(k) {
+		if(this.paths.length == 1) return this.paths[0].calculate(this.start,k); else {
+			var ratio = k * this.totalStrength;
+			var lastEnd = this.start;
+			var _g = 0;
+			var _g1 = this.paths;
+			while(_g < _g1.length) {
+				var path = _g1[_g];
+				++_g;
+				if(ratio > path.strength) {
+					ratio -= path.strength;
+					lastEnd = path.end;
+				} else return path.calculate(lastEnd,ratio / path.strength);
+			}
+		}
+		return 0;
+	}
+	,get_end: function() {
+		if(this.paths.length > 0) {
+			var path = this.paths[this.paths.length - 1];
+			return path.end;
+		} else return this.start;
+	}
+	,__class__: motion.ComponentPath
+	,__properties__: {get_end:"get_end"}
+};
+motion.BezierPath = function(end,control,strength) {
+	this.end = end;
+	this.control = control;
+	this.strength = strength;
+};
+$hxClasses["motion.BezierPath"] = motion.BezierPath;
+motion.BezierPath.__name__ = ["motion","BezierPath"];
+motion.BezierPath.prototype = {
+	calculate: function(start,k) {
+		return (1 - k) * (1 - k) * start + 2 * (1 - k) * k * this.control + k * k * this.end;
+	}
+	,__class__: motion.BezierPath
+};
+motion.LinearPath = function(end,strength) {
+	motion.BezierPath.call(this,end,0,strength);
+};
+$hxClasses["motion.LinearPath"] = motion.LinearPath;
+motion.LinearPath.__name__ = ["motion","LinearPath"];
+motion.LinearPath.__super__ = motion.BezierPath;
+motion.LinearPath.prototype = $extend(motion.BezierPath.prototype,{
+	calculate: function(start,k) {
+		return start + k * (this.end - start);
+	}
+	,__class__: motion.LinearPath
+});
+motion.RotationPath = function(x,y) {
+	this.step = 0.01;
+	this._x = x;
+	this._y = y;
+	this.offset = 0;
+	this.start = this.calculate(0.0);
+};
+$hxClasses["motion.RotationPath"] = motion.RotationPath;
+motion.RotationPath.__name__ = ["motion","RotationPath"];
+motion.RotationPath.__interfaces__ = [motion.IComponentPath];
+motion.RotationPath.prototype = {
+	calculate: function(k) {
+		var dX = this._x.calculate(k) - this._x.calculate(k + this.step);
+		var dY = this._y.calculate(k) - this._y.calculate(k + this.step);
+		var angle = Math.atan2(dY,dX) * (180 / Math.PI);
+		angle = (angle + this.offset) % 360;
+		return angle;
+	}
+	,get_end: function() {
+		return this.calculate(1.0);
+	}
+	,__class__: motion.RotationPath
+	,__properties__: {get_end:"get_end"}
+};
+motion.actuators.MethodActuator = function(target,duration,properties) {
+	this.currentParameters = new Array();
+	this.tweenProperties = { };
+	motion.actuators.SimpleActuator.call(this,target,duration,properties);
+	if(!Object.prototype.hasOwnProperty.call(properties,"start")) this.properties.start = new Array();
+	if(!Object.prototype.hasOwnProperty.call(properties,"end")) this.properties.end = this.properties.start;
+	var _g1 = 0;
+	var _g = this.properties.start.length;
+	while(_g1 < _g) {
+		var i = _g1++;
+		this.currentParameters.push(null);
+	}
+};
+$hxClasses["motion.actuators.MethodActuator"] = motion.actuators.MethodActuator;
+motion.actuators.MethodActuator.__name__ = ["motion","actuators","MethodActuator"];
+motion.actuators.MethodActuator.__super__ = motion.actuators.SimpleActuator;
+motion.actuators.MethodActuator.prototype = $extend(motion.actuators.SimpleActuator.prototype,{
+	apply: function() {
+		this.callMethod(this.target,this.properties.end);
+	}
+	,complete: function(sendEvent) {
+		if(sendEvent == null) sendEvent = true;
+		var _g1 = 0;
+		var _g = this.properties.start.length;
+		while(_g1 < _g) {
+			var i = _g1++;
+			this.currentParameters[i] = Reflect.field(this.tweenProperties,"param" + i);
+		}
+		this.callMethod(this.target,this.currentParameters);
+		motion.actuators.SimpleActuator.prototype.complete.call(this,sendEvent);
+	}
+	,initialize: function() {
+		var details;
+		var propertyName;
+		var start;
+		var _g1 = 0;
+		var _g = this.properties.start.length;
+		while(_g1 < _g) {
+			var i = _g1++;
+			propertyName = "param" + i;
+			start = this.properties.start[i];
+			this.tweenProperties[propertyName] = start;
+			if(typeof(start) == "number" || ((start | 0) === start)) {
+				details = new motion.actuators.PropertyDetails(this.tweenProperties,propertyName,start,this.properties.end[i] - start);
+				this.propertyDetails.push(details);
+			}
+		}
+		this.detailsLength = this.propertyDetails.length;
+		this.initialized = true;
+	}
+	,update: function(currentTime) {
+		motion.actuators.SimpleActuator.prototype.update.call(this,currentTime);
+		if(this.active) {
+			var _g1 = 0;
+			var _g = this.properties.start.length;
+			while(_g1 < _g) {
+				var i = _g1++;
+				this.currentParameters[i] = Reflect.field(this.tweenProperties,"param" + i);
+			}
+			this.callMethod(this.target,this.currentParameters);
+		}
+	}
+	,__class__: motion.actuators.MethodActuator
+});
+motion.actuators.MotionPathActuator = function(target,duration,properties) {
+	motion.actuators.SimpleActuator.call(this,target,duration,properties);
+};
+$hxClasses["motion.actuators.MotionPathActuator"] = motion.actuators.MotionPathActuator;
+motion.actuators.MotionPathActuator.__name__ = ["motion","actuators","MotionPathActuator"];
+motion.actuators.MotionPathActuator.__super__ = motion.actuators.SimpleActuator;
+motion.actuators.MotionPathActuator.prototype = $extend(motion.actuators.SimpleActuator.prototype,{
+	apply: function() {
+		var _g = 0;
+		var _g1 = Reflect.fields(this.properties);
+		while(_g < _g1.length) {
+			var propertyName = _g1[_g];
+			++_g;
+			if(Object.prototype.hasOwnProperty.call(this.target,propertyName)) Reflect.setField(this.target,propertyName,(js.Boot.__cast(Reflect.field(this.properties,propertyName) , motion.IComponentPath)).get_end()); else Reflect.setProperty(this.target,propertyName,(js.Boot.__cast(Reflect.field(this.properties,propertyName) , motion.IComponentPath)).get_end());
+		}
+	}
+	,initialize: function() {
+		var details;
+		var path;
+		var _g = 0;
+		var _g1 = Reflect.fields(this.properties);
+		while(_g < _g1.length) {
+			var propertyName = _g1[_g];
+			++_g;
+			path = js.Boot.__cast(Reflect.field(this.properties,propertyName) , motion.IComponentPath);
+			if(path != null) {
+				var isField = true;
+				if(Object.prototype.hasOwnProperty.call(this.target,propertyName)) path.start = Reflect.field(this.target,propertyName); else {
+					isField = false;
+					path.start = Reflect.getProperty(this.target,propertyName);
+				}
+				details = new motion.actuators.PropertyPathDetails(this.target,propertyName,path,isField);
+				this.propertyDetails.push(details);
+			}
+		}
+		this.detailsLength = this.propertyDetails.length;
+		this.initialized = true;
+	}
+	,update: function(currentTime) {
+		if(!this.paused) {
+			var details;
+			var easing;
+			var tweenPosition = (currentTime - this.timeOffset) / this.duration;
+			if(tweenPosition > 1) tweenPosition = 1;
+			if(!this.initialized) this.initialize();
+			if(!this.special) {
+				easing = this._ease.calculate(tweenPosition);
+				var _g = 0;
+				var _g1 = this.propertyDetails;
+				while(_g < _g1.length) {
+					var details1 = _g1[_g];
+					++_g;
+					if(details1.isField) Reflect.setField(details1.target,details1.propertyName,(js.Boot.__cast(details1 , motion.actuators.PropertyPathDetails)).path.calculate(easing)); else Reflect.setProperty(details1.target,details1.propertyName,(js.Boot.__cast(details1 , motion.actuators.PropertyPathDetails)).path.calculate(easing));
+				}
+			} else {
+				if(!this._reverse) easing = this._ease.calculate(tweenPosition); else easing = this._ease.calculate(1 - tweenPosition);
+				var endValue;
+				var _g2 = 0;
+				var _g11 = this.propertyDetails;
+				while(_g2 < _g11.length) {
+					var details2 = _g11[_g2];
+					++_g2;
+					if(!this._snapping) {
+						if(details2.isField) Reflect.setField(details2.target,details2.propertyName,(js.Boot.__cast(details2 , motion.actuators.PropertyPathDetails)).path.calculate(easing)); else Reflect.setProperty(details2.target,details2.propertyName,(js.Boot.__cast(details2 , motion.actuators.PropertyPathDetails)).path.calculate(easing));
+					} else if(details2.isField) Reflect.setField(details2.target,details2.propertyName,Math.round((js.Boot.__cast(details2 , motion.actuators.PropertyPathDetails)).path.calculate(easing))); else Reflect.setProperty(details2.target,details2.propertyName,Math.round((js.Boot.__cast(details2 , motion.actuators.PropertyPathDetails)).path.calculate(easing)));
+				}
+			}
+			if(tweenPosition == 1) {
+				if(this._repeat == 0) {
+					this.active = false;
+					if(this.toggleVisible && this.getField(this.target,"alpha") == 0) this.setField(this.target,"visible",false);
+					this.complete(true);
+					return;
+				} else {
+					if(this._reflect) this._reverse = !this._reverse;
+					this.startTime = currentTime;
+					this.timeOffset = this.startTime + this._delay;
+					if(this._repeat > 0) this._repeat--;
+				}
+			}
+			if(this.sendChange) this.change();
+		}
+	}
+	,__class__: motion.actuators.MotionPathActuator
+});
+motion.actuators.PropertyDetails = function(target,propertyName,start,change,isField) {
+	if(isField == null) isField = true;
+	this.target = target;
+	this.propertyName = propertyName;
+	this.start = start;
+	this.change = change;
+	this.isField = isField;
+};
+$hxClasses["motion.actuators.PropertyDetails"] = motion.actuators.PropertyDetails;
+motion.actuators.PropertyDetails.__name__ = ["motion","actuators","PropertyDetails"];
+motion.actuators.PropertyDetails.prototype = {
+	__class__: motion.actuators.PropertyDetails
+};
+motion.actuators.PropertyPathDetails = function(target,propertyName,path,isField) {
+	if(isField == null) isField = true;
+	motion.actuators.PropertyDetails.call(this,target,propertyName,0,0,isField);
+	this.path = path;
+};
+$hxClasses["motion.actuators.PropertyPathDetails"] = motion.actuators.PropertyPathDetails;
+motion.actuators.PropertyPathDetails.__name__ = ["motion","actuators","PropertyPathDetails"];
+motion.actuators.PropertyPathDetails.__super__ = motion.actuators.PropertyDetails;
+motion.actuators.PropertyPathDetails.prototype = $extend(motion.actuators.PropertyDetails.prototype,{
+	__class__: motion.actuators.PropertyPathDetails
+});
+motion.easing.ExpoEaseIn = function() {
+};
+$hxClasses["motion.easing.ExpoEaseIn"] = motion.easing.ExpoEaseIn;
+motion.easing.ExpoEaseIn.__name__ = ["motion","easing","ExpoEaseIn"];
+motion.easing.ExpoEaseIn.__interfaces__ = [motion.easing.IEasing];
+motion.easing.ExpoEaseIn.prototype = {
+	calculate: function(k) {
+		if(k == 0) return 0; else return Math.pow(2,10 * (k - 1));
+	}
+	,ease: function(t,b,c,d) {
+		if(t == 0) return b; else return c * Math.pow(2,10 * (t / d - 1)) + b;
+	}
+	,__class__: motion.easing.ExpoEaseIn
+};
+motion.easing.ExpoEaseInOut = function() {
+};
+$hxClasses["motion.easing.ExpoEaseInOut"] = motion.easing.ExpoEaseInOut;
+motion.easing.ExpoEaseInOut.__name__ = ["motion","easing","ExpoEaseInOut"];
+motion.easing.ExpoEaseInOut.__interfaces__ = [motion.easing.IEasing];
+motion.easing.ExpoEaseInOut.prototype = {
+	calculate: function(k) {
+		if(k == 0) return 0;
+		if(k == 1) return 1;
+		if((k /= 0.5) < 1.0) return 0.5 * Math.pow(2,10 * (k - 1));
+		return 0.5 * (2 - Math.pow(2,-10 * --k));
+	}
+	,ease: function(t,b,c,d) {
+		if(t == 0) return b;
+		if(t == d) return b + c;
+		if((t /= d / 2.0) < 1.0) return c / 2 * Math.pow(2,10 * (t - 1)) + b;
+		return c / 2 * (2 - Math.pow(2,-10 * --t)) + b;
+	}
+	,__class__: motion.easing.ExpoEaseInOut
+};
+motion.easing.Linear = function() { };
+$hxClasses["motion.easing.Linear"] = motion.easing.Linear;
+motion.easing.Linear.__name__ = ["motion","easing","Linear"];
+motion.easing.Linear.__properties__ = {get_easeNone:"get_easeNone"}
+motion.easing.Linear.get_easeNone = function() {
+	return new motion.easing.LinearEaseNone();
+};
+motion.easing.LinearEaseNone = function() {
+};
+$hxClasses["motion.easing.LinearEaseNone"] = motion.easing.LinearEaseNone;
+motion.easing.LinearEaseNone.__name__ = ["motion","easing","LinearEaseNone"];
+motion.easing.LinearEaseNone.__interfaces__ = [motion.easing.IEasing];
+motion.easing.LinearEaseNone.prototype = {
+	calculate: function(k) {
+		return k;
+	}
+	,ease: function(t,b,c,d) {
+		return c * t / d + b;
+	}
+	,__class__: motion.easing.LinearEaseNone
 };
 function $iterator(o) { if( o instanceof Array ) return function() { return HxOverrides.iter(o); }; return typeof(o.iterator) == 'function' ? $bind(o,o.iterator) : o.iterator; }
 var $_, $fid = 0;
@@ -9336,6 +10586,8 @@ var Bool = $hxClasses.Bool = Boolean;
 Bool.__ename__ = ["Bool"];
 var Class = $hxClasses.Class = { __name__ : ["Class"]};
 var Enum = { };
+engine.input.Dispatcher.BUTTON_RIGHT = 1;
+engine.input.Dispatcher.BUTTON_LEFT = 0;
 engine.utils.Pair.__meta__ = { obj : { generic : null}};
 haxe.Serializer.USE_CACHE = false;
 haxe.Serializer.USE_ENUM_INDEX = false;
@@ -9380,5 +10632,11 @@ kha.math._Matrix3.Matrix3_Impl_.height = 3;
 kha.math.Matrix4.width = 4;
 kha.math.Matrix4.height = 4;
 kha.math.Random.index = 0;
+motion.actuators.SimpleActuator.actuators = new Array();
+motion.actuators.SimpleActuator.actuatorsLength = 0;
+motion.actuators.SimpleActuator.addedEvent = false;
+motion.Actuate.defaultActuator = motion.actuators.SimpleActuator;
+motion.Actuate.defaultEase = motion.easing.Expo.get_easeOut();
+motion.Actuate.targetLibraries = new haxe.ds.ObjectMap();
 Main.main();
 })(typeof window != "undefined" ? window : exports);

@@ -4,7 +4,7 @@ import kha.graphics2.Graphics;
 import kha.math.Vector3;
 import khattraction.entities.Entity;
 import engine.utils.Pair;
-import khattraction.physic.AABB;
+import engine.physic.AABB;
 
 class WorldManager {
     public static var the : WorldManager;

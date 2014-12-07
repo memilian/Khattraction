@@ -1,6 +1,7 @@
 package khattraction.entities;
-import khattraction.mathutils.Angles;
-import khattraction.physic.AABB;
+import engine.physic.AABB;
+import khattraction.mathutils.Utils;
+import engine.physic.AABB;
 import engine.world.WorldManager;
 import kha.Color;
 import kha.Image;
@@ -8,8 +9,8 @@ import kha.graphics2.Graphics;
 import kha.Loader;
 import kha.math.Vector3;
 
-using khattraction.physic.AABB;
-using khattraction.mathutils.Angles;
+using engine.physic.AABB;
+using khattraction.mathutils.Utils;
 
 class Bullet  extends MovingEntity{
 
@@ -24,7 +25,7 @@ class Bullet  extends MovingEntity{
     var speed = 6.0;
 
     public function new(position:Vector3, size:Vector3, initialVelocity:Vector3) {
-        super(position, size, initialVelocity.mult(speed));
+        super(position, size, initialVelocity == null?new Vector3(0,0,0):initialVelocity.mult(speed));
         image = Loader.the.getImage("bullet");
         posBuffer = new Array<Vector3>();
     }

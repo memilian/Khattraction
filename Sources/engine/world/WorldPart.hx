@@ -2,7 +2,7 @@ package engine.world;
 import kha.graphics2.Graphics;
 import khattraction.entities.Entity;
 import engine.utils.Pair;
-import khattraction.physic.AABB;
+import engine.physic.AABB;
 
 class WorldPart {
     @:isVar public var bounds(default, null) : AABB;

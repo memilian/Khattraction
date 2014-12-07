@@ -3,8 +3,11 @@
 	"game": {
 		"name": "Khattraction",
 		"width": 1200,
-		"height": 570
+		"height": 550
 	},
+	"sources": [
+		"actuate/1,7,5"
+	],
 	"assets": [
 		{
 			"id": "098ae4f1-b591-4792-b49e-ff8186f7098f",
@@ -17,6 +20,12 @@
 			"type": "image",
 			"file": "bullet.png",
 			"name": "bullet"
+		},
+		{
+			"id": "36b520f2-ea8a-4d69-9e23-d36b388e1a15",
+			"type": "blob",
+			"file": "Roboto18.kravur",
+			"name": "Roboto18.kravur"
 		}
 	],
 	"rooms": [
@@ -26,7 +35,8 @@
 			"parent": null,
 			"neighbours": [],
 			"assets": [
-				"49fcc545-106c-4029-81aa-fa3ad3f1a8e7"
+				"49fcc545-106c-4029-81aa-fa3ad3f1a8e7",
+				"36b520f2-ea8a-4d69-9e23-d36b388e1a15"
 			]
 		}
 	]

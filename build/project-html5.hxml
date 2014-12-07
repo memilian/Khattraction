@@ -1,6 +1,7 @@
 -cp ../Sources
 -cp ../Kha/Sources
 -cp ../Kha/Backends/HTML5
+-cp ../actuate/1,7,5
 -D embed_js
 -js html5/kha.js
 -main Main

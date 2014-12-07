@@ -1,4 +1,4 @@
-package khattraction.physic;
+package engine.physic;
 
 import khattraction.entities.Entity;
 import kha.math.Vector3;
@@ -13,6 +13,10 @@ class AABB {
         this.size = size;
     }
 
+    public function update(pos : Vector3, size : Vector3){
+        this.position = pos;
+        this.size = size;
+    }
     public static function AabbFromEntity(ent : Entity) {
         return new AABB(ent.position,ent.size);
     }
@@ -23,9 +27,9 @@ class AABB {
 
     public function getCenter():Vector3 {
 
-        return new Vector3((position.x+size.x)/2,
-                            (position.y+size.y)/2,
-                            (position.z+size.z)/2
+        return new Vector3(position.x+size.x/2,
+                            position.y+size.y/2,
+                            position.z+size.z/2
                     );
     }
 

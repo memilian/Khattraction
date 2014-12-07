@@ -5,14 +5,14 @@ import haxe.Timer;
 import engine.input.Dispatcher;
 import kha.graphics4.BlendingOperation;
 import kha.Key;
-import khattraction.mathutils.Angles;
+import khattraction.mathutils.Utils;
 import kha.graphics2.GraphicsExtension;
 import kha.graphics2.Graphics;
 import kha.Color;
 import kha.math.Vector3;
 
 using kha.graphics2.GraphicsExtension;
-using khattraction.mathutils.Angles;
+using khattraction.mathutils.Utils;
 
 class BulletLauncher extends Entity {
 
