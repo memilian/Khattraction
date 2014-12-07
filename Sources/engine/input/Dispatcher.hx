@@ -1,5 +1,6 @@
 package engine.input;
 
+import js.Browser;
 import kha.Button;
 import kha.input.Mouse;
 import kha.Key;
@@ -41,6 +42,21 @@ class Dispatcher {
         keyCharStates = new Map<String,Bool>();
 
         mouse.notify(onMouseDown,onMouseUp,onMouseMove,onMouseWheel);
+        //TODO: find how to get mouseWheel event working
+       /* var evtFunc = function(evt){
+            var dw : Int;
+
+            if(evt.detail != null)
+                dw = (evt.detail > 0) ? -1 : 1;
+            else
+                dw = (evt.wheelDelta > 0 )? 1 : -1;
+            onMouseWheel(dw);
+        };
+        Browser.document.getElementById('khanvas').onmousewheel = evtFunc;
+        Browser.document.getElementById('khanvas').onscroll = evtFunc;
+        */
+
+
         mouseDownListeners = new Array<Int->Int->Int->Void>();
         mouseUpListeners = new  Array<Int->Int->Int->Void>();
         mouseDragListeners = new Array<Int->Int->Int->Void>();

@@ -15,7 +15,7 @@ import kha.math.Vector3;
 
 class Button extends UIElement implements IHoverable implements IClickable implements IDisplayText{
 
-    @:isVar public var onClick(default,default) : Void->Void;
+    @:isVar public var onClick(default,default) : Bool->Void;
     @:isVar public var active(default,default) : Bool = false;
     @:isVar public var text(default,default) : String;
     @:isVar public var font(default,default) : Font;
@@ -23,18 +23,18 @@ class Button extends UIElement implements IHoverable implements IClickable imple
     var hover : Bool;
 
     public function new(parent:UIElement, pos : Vector3, size : Vector3, ?text : String) {
-        super(parent, pos,size);
+        super(parent, pos, size);
         this.text = text==null?"Click me !":text;
         Dispatcher.get().mouseNotify(onMouseDown,onMouseUp,null,onMouseMoved,null);
         font = Loader.the.loadFont("Roboto", new FontStyle(false,false,false),18);
-        onClick = function(){};
+        onClick = function(mouseDown:Bool){};
     }
 
     static public function create(parent:UIElement){
         return new Button(parent, new Vector3(0,0,0), new Vector3(0,0,0));
     }
 
-    public function setOnClick(onclick : Void->Void) : Button {
+    public function setOnClick(onclick : Bool->Void) : Button {
         this.onClick = onclick;
         return this;
     }
@@ -62,15 +62,17 @@ class Button extends UIElement implements IHoverable implements IClickable imple
 
     @:allow(engine.input.Dispatcher)
     private function onMouseDown(button : Int, x : Int, y : Int){
-        if(bounds.contains(new Vector3(x,y,0)))
+        if(bounds.contains(new Vector3(x,y,0))){
             active = true;
+            onClick(true);
+        }
     }
 
     @:allow(engine.input.Dispatcher)
     private function onMouseUp(button : Int, x : Int, y : Int){
         active = false;
         if(bounds.contains(new Vector3(x,y,0))){
-            onClick();
+            onClick(false);
         }
     }
 

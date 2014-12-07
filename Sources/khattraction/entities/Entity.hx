@@ -9,6 +9,7 @@ class Entity {
     @:isVar public var size(default, default):Vector3;
     @:isVar public var zindex(default, default):Int;
     @:isVar public var timeAlive(default, default):Int;
+    @:isVar public var isDead(default, default):Bool = false;
 
     public function new(position:Vector3, size:Vector3) {
         this.position = position;

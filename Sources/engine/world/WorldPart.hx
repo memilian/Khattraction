@@ -1,4 +1,5 @@
 package engine.world;
+import khattraction.entities.Bullet;
 import kha.graphics2.Graphics;
 import khattraction.entities.Entity;
 import engine.utils.Pair;
@@ -28,7 +29,6 @@ class WorldPart {
 
     public function addEntity(ent:Entity):Void {
         entities.push(ent);
-        entities.sort(sortByZindex);
     }
 
     public function removeEntity(ent : Entity){
@@ -39,9 +39,7 @@ class WorldPart {
         return entities;
     }
 
-    private function sortByZindex(ent:Entity, other : Entity) : Int{
-        return ent.zindex>other.zindex ? 1 : ent.zindex == other.zindex ? 0 : -1;
-    }
+
 
     public function update(){
         while(entitiesToRemove.length >0){
@@ -52,8 +50,11 @@ class WorldPart {
 
         for(ent in entities){
             ent.update();
-            if(!bounds.contains(AABB.AabbFromEntity(ent).getCenter())){
+            if(Type.getClass(ent) == Bullet && cast(ent,Bullet).shouldBeDead){
+                entities.remove(ent);
+            }
 
+            if(!bounds.contains(ent.position)){
                 entitiesToRemove.push(ent);
                 if(!WorldManager.the.placeLater(ent))
                     entitiesToRemove.push(ent);
@@ -61,10 +62,6 @@ class WorldPart {
         }
     }
 
-    public function render(g:Graphics){
-        for(ent in entities)
-            ent.render(g);
-    }
 
     public function addOverlappingEntity(ent : Entity){
         entitiesOverlapping.push(ent);
@@ -90,4 +87,12 @@ class WorldPart {
 
         return res;
     }
+
+    public function clearAll(){
+        entities = new Array<Entity>();
+        entitiesToAdd = new Array<Entity>();
+        entitiesToRemove = new Array<Entity>();
+        entitiesOverlapping = new Array<Entity>();
+    }
+
 }

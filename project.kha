@@ -10,12 +10,6 @@
 	],
 	"assets": [
 		{
-			"id": "098ae4f1-b591-4792-b49e-ff8186f7098f",
-			"type": "image",
-			"file": "tst.png",
-			"name": "tst"
-		},
-		{
 			"id": "49fcc545-106c-4029-81aa-fa3ad3f1a8e7",
 			"type": "image",
 			"file": "bullet.png",
@@ -26,6 +20,18 @@
 			"type": "blob",
 			"file": "Roboto18.kravur",
 			"name": "Roboto18.kravur"
+		},
+		{
+			"id": "3127875e-53c1-467b-a307-8239e9a1c158",
+			"type": "blob",
+			"file": "level1.json",
+			"name": "level1"
+		},
+		{
+			"id": "8ffcc275-58f3-43fb-a18c-064601d6d699",
+			"type": "blob",
+			"file": "levels.json",
+			"name": "levels"
 		}
 	],
 	"rooms": [
@@ -36,7 +42,9 @@
 			"neighbours": [],
 			"assets": [
 				"49fcc545-106c-4029-81aa-fa3ad3f1a8e7",
-				"36b520f2-ea8a-4d69-9e23-d36b388e1a15"
+				"36b520f2-ea8a-4d69-9e23-d36b388e1a15",
+				"3127875e-53c1-467b-a307-8239e9a1c158",
+				"8ffcc275-58f3-43fb-a18c-064601d6d699"
 			]
 		}
 	]

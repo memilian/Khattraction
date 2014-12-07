@@ -1,5 +1,6 @@
 package engine.world;
 
+import khattraction.entities.MovingEntity;
 import kha.graphics2.Graphics;
 import kha.math.Vector3;
 import khattraction.entities.Entity;
@@ -43,19 +44,43 @@ class WorldManager {
 
     public function removeEntity(ent : Entity){
         var part : WorldPart= getPartForEntity(ent);
-        if(part != null)
+        if(part != null){
             part.removeEntity(ent);
+            var overlapParts = getPartsInAabb(AABB.AabbFromEntity(ent));
+            for(p in overlapParts){
+                if(p != part)
+                    p.removeOverlappingEntity(ent);
+            }
+        }
     }
 
     public function spawnEntity(ent : Entity){
         var part : WorldPart= getPartForEntity(ent);
-        if(part != null)
+        if(part != null){
             part.addEntity(ent);
+
+            var overlapParts = getPartsInAabb(AABB.AabbFromEntity(ent));
+            for(p in overlapParts){
+                if(p != part)
+                    p.addOverlappingEntity(ent);
+            }
+        }
+    }
+
+    public function getPartsInAabb(aabb : AABB) : Array<WorldPart>{
+        var res = new Array<WorldPart>();
+        var it = worldParts.keys();
+        while(it.hasNext()){
+            var part : WorldPart = worldParts.get(it.next());
+            if(part.bounds.collide(aabb))
+                res.push(part);
+        }
+        return res;
     }
 
     public function getCoordFromPos(pos : Vector3){
-        var coordX = Math.floor(pos.x/partWidth);
-        var coordY = Math.floor(pos.y/partHeight);
+        var coordX = Math.round(pos.x/partWidth);
+        var coordY = Math.round(pos.y/partHeight);
         return new Pair(coordX,coordY);
     }
 
@@ -73,13 +98,22 @@ class WorldManager {
 
     public function render(g : Graphics){
         var it = worldParts.keys();
+        var ents = new Array<Entity>();
         while(it.hasNext()){
-            worldParts.get(it.next()).render(g);
+            ents = ents.concat(worldParts.get(it.next()).getEntities());
         }
+        ents.sort(sortByZindex);
+        for(i in 0...ents.length)
+            ents[i].render(g);
     }
 
+    private function sortByZindex(ent:Entity, other : Entity) : Int{
+        return ent.zindex>other.zindex ? 1 : ent.zindex == other.zindex ? 0 : -1;
+    }
+
+
     public function getPartForEntity(ent : Entity){
-        var coord = getCoordFromPos(AABB.AabbFromEntity(ent).getCenter());
+        var coord = getCoordFromPos(ent.position);
         if(!worldParts.exists(coord))
             return null;
         var part : WorldPart= worldParts.get(coord);
@@ -99,10 +133,22 @@ class WorldManager {
         var it = worldParts.keys();
         var res = new Array();
         while(it.hasNext()){
-            var arr = worldParts.get(it.next()).getEntitiesOfType(Type.createInstance(type, new Array()));
+            var part : WorldPart = worldParts.get(it.next());
+            if(!part.bounds.collide(aabb))
+                continue;
+            var arr = part.getEntitiesOfType(Type.createInstance(type, new Array()));
             res = res.concat(arr);
         }
         return res;
     }
+
+    public function clearAll(){
+        var it = worldParts.keys();
+        while(it.hasNext()){
+            var part : WorldPart = worldParts.get(it.next());
+            part.clearAll();
+        }
+    }
+
 
 }

@@ -1,4 +1,6 @@
 package khattraction.ui;
+import engine.world.WorldManager;
+import khattraction.entities.GravitationalObject;
 import engine.ui.Button;
 import motion.easing.Linear;
 import motion.easing.Linear;
@@ -16,8 +18,31 @@ class IGMenu extends Menu{
         gameHeight = KhattractionGame.instance.height;
         gameWidth = KhattractionGame.instance.width;
         super(new Vector3(0,gameHeight-100,0), new Vector3(gameWidth,100,0));
+
+        //create children elements
         var helpBtn = Button.create(this).setPosition(gameWidth-60,10,0).setSize(50,20).setText("Help ?");
         children.push(helpBtn);
+        var attractorBtn = Button.create(this).setPosition(300,20,0).setSize(100,50).setText("Attractor");
+        attractorBtn.onClick = function(mouseDown:Bool){
+                if(!mouseDown)
+                    return;
+                var attr : GravitationalObject = new GravitationalObject(new Vector3(attractorBtn.realPosition.x,attractorBtn.realPosition.y,0));
+                attr.selected = true;
+                WorldManager.the.spawnEntity(attr);
+            };
+        children.push(attractorBtn);
+
+        var repulsorBtn = Button.create(this).setPosition(500,20,0).setSize(100,50).setText("Repulsor");
+        repulsorBtn.onClick = function(mouseDown:Bool){
+            if(!mouseDown)
+                return;
+            var rep : GravitationalObject = new GravitationalObject(new Vector3(repulsorBtn.realPosition.x,repulsorBtn.realPosition.y,0), true);
+            rep.selected = true;
+            WorldManager.the.spawnEntity(rep);
+        };
+        children.push(repulsorBtn);
+
+
     }
 
     override public function update(){

@@ -21,18 +21,18 @@ class BulletLauncher extends Entity {
     var lastShoot = 0.0;
     @:isVar var freq = 0.005;//shoot frequency (s)
 
-    public function new(position:Vector3,size:Vector3) {
-        super(position, size);
-        angle = 90;
+    public function new(position:Vector3) {
+        super(position, new Vector3(40,10,0));
+        angle = 0;
         Dispatcher.get().notify(null,null,onKeyPress);
         zindex = 100;
     }
 
     public function onKeyPress(key:Key, str:String):Void {
-        if(key == Key.CHAR && str == 'z')
-            angle += turnSpeed;
-        if(key == Key.CHAR && str == 's')
+        if(key == Key.CHAR && (str == 'z' || str == 'w'))
             angle -= turnSpeed;
+        if(key == Key.CHAR && str == 's')
+            angle += turnSpeed;
         if(key == Key.CHAR && str == ' '){
 
             launchBullet();

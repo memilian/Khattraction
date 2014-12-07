@@ -7,7 +7,7 @@ class Wall extends Entity{
 
     public function new(position : Vector3, size : Vector3) {
         super(position, size);
-        zindex = 10;
+        zindex = -10;
     }
 
     override public function update():Void {

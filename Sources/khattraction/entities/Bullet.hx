@@ -19,15 +19,22 @@ class Bullet  extends MovingEntity{
     var maxBuffSize = 5;
     var deadCounter = 0;
     var maxDeadCounter = 60;
-    var isDead = false;
-
+    var maxTimeAlive : Int = 600;
     var defaultColor = Color.fromBytes(130,240,255,1);
     var speed = 6.0;
+    var damage = 1.0;
+    public var shouldBeDead = false;
 
     public function new(position:Vector3, size:Vector3, initialVelocity:Vector3) {
         super(position, size, initialVelocity == null?new Vector3(0,0,0):initialVelocity.mult(speed));
         image = Loader.the.getImage("bullet");
         posBuffer = new Array<Vector3>();
+    }
+
+    public function equal(o){
+        if(o.timeAlive == this.timeAlive)
+            return true;
+        return false;
     }
 
 
@@ -36,26 +43,40 @@ class Bullet  extends MovingEntity{
             if(posBuffer.length > maxBuffSize)
                 posBuffer.pop();
             posBuffer.insert(0,position);
-            if(deadCounter++>maxDeadCounter)
+            if(deadCounter++>maxDeadCounter){
                 WorldManager.the.removeEntity(this);
+                shouldBeDead = true;
+            }
             return;
         }
 
         super.update();
-
+        if(timeAlive > maxTimeAlive)
+            isDead = true;
         if(posBuffer.length > maxBuffSize)
             posBuffer.pop();
         posBuffer.insert(0,position);
 
-        if(!KhattractionGame.gameBounds.collide(AABB.AabbFromEntity(this))){
+        if(!KhattractionGame.gameBounds.contains(AABB.AabbFromEntity(this).getCenter())){
             isDead = true;
-            position = position.sub(velocity); //Stay in world part
+            while(WorldManager.the.getPartForEntity(this) == null){
+                position = position.sub(velocity); //Stay in world part
+            }
         }
 
         var walls = WorldManager.the.getEntitiesInAabb(AABB.AabbFromEntity(this).expand(50), Wall);
         for(wall in walls){
             if(AABB.AabbFromEntity(this).collide(AABB.AabbFromEntity(wall)))
                 isDead = true;
+        }
+
+        var targets = WorldManager.the.getEntitiesInAabb(AABB.AabbFromEntity(this).expand(50), Target);
+        for(t in targets){
+            if(AABB.AabbFromEntity(this).collide(AABB.AabbFromEntity(t)))
+                if(position.distance(t.position)<(t.size.x*2+size.x*2)/2){
+                    cast(t,Target).takeDamage(damage);
+                    isDead = true;
+                }
         }
     }
 
@@ -82,7 +103,7 @@ class Bullet  extends MovingEntity{
             g.set_opacity(1-i/maxBuffSize);
             g.drawScaledImage(image,pos.x,pos.y,size.x*(1-deathRatio),size.y*(1-deathRatio));
         }
-        g.set_opacity(1);
+        g.pushOpacity(1);
 
 
         g.set_color(Color.fromBytes(100+Std.int(deathRatio*155), 255-Std.int(deathRatio*150), 100-Std.int(deathRatio*100),255-Std.int(255*deathRatio)));
@@ -94,6 +115,7 @@ class Bullet  extends MovingEntity{
                                     size.y-size.y*deathRatio);
 
         }
+        g.popOpacity();
     }
 
 

@@ -1,5 +1,8 @@
 package khattraction;
 
+import khattraction.level.LevelManager;
+import kha.CanvasImage;
+import kha.Canvas;
 import kha.FontStyle;
 import khattraction.ui.IGMenu;
 import engine.ui.Menu;
@@ -29,6 +32,9 @@ class KhattractionGame extends Game {
 	var lastUpdate : Float = 0;
 	var lastRender : Float = 0;
 	var inidone = false;
+
+	var blackHole : GravitationalObject;
+
 	public static var gameBounds : AABB;
 	var menu : Menu;
 
@@ -44,24 +50,17 @@ class KhattractionGame extends Game {
 		backBuffer = Image.createRenderTarget(width, height);
 
 		WorldManager.createInstance(6,3,200,190);
-
 	}
 
 	public function loadDone(){
 		Configuration.setScreen(this);
 		gameBounds = new AABB(new Vector3(0,0,0),new Vector3(width,height,0));
-		inidone = true;
-		initLevel();
+		//initLevel();
+		LevelManager.loadLevel(1);
 		menu = new IGMenu();
-	}
-
-	public function initLevel():Void {
-		bulletLauncher = new BulletLauncher(new Vector3(200,200,0), new Vector3(50,20,0));
-		WorldManager.the.spawnEntity(bulletLauncher);
-		var wall = new Wall(new Vector3(500,0,0), new Vector3(20,800,0));
-		WorldManager.the.spawnEntity(wall);
-		var attr = new GravitationalObject(new Vector3(500,200,0));
-		WorldManager.the.spawnEntity(attr);
+		blackHole = new GravitationalObject(new Vector3(20,20,0), true, 40, 50);
+		blackHole.locked = true;
+		inidone = true;
 	}
 
 	override public function update() : Void {
@@ -74,6 +73,7 @@ class KhattractionGame extends Game {
 		menu.update();
 		Dispatcher.get().update();
 		WorldManager.the.update();
+		blackHole.update();
 	}
 
 	override public function render(frame : Framebuffer) : Void {
@@ -94,20 +94,16 @@ class KhattractionGame extends Game {
 		g.begin();
 		g.clear(Color.fromBytes(48,48,48,255));
 		WorldManager.the.render(g);
-
+		blackHole.render(g);
 //	g.setBlendingMode(BlendingOperation.BlendOne, BlendingOperation.InverseDestinationAlpha);
 	//	g.setBlendingMode(BlendingOperation.BlendOne, BlendingOperation.BlendOne);
 	//	g.setBlendingMode(BlendingOperation.SourceAlpha, BlendingOperation.InverseSourceAlpha);
 	//	g.setBlendingMode(BlendingOperation.DestinationAlpha, BlendingOperation.BlendZero);
 
-		for(ent in WorldManager.the.getEntities())
-			ent.render(g);
+
 
 		menu.render(g);
 		g.end();
-
-
-
 
 		startRender(frame);
 		Scaler.scale(backBuffer, frame, kha.Sys.screenRotation);

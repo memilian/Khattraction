@@ -3,7 +3,7 @@ package engine.ui;
 import engine.input.Dispatcher;
 interface IClickable {
 
-    @:isVar var onClick(default,default) : Void->Void;
+    @:isVar var onClick(default,default) : Bool->Void;
     @:isVar var active(default,default) : Bool;
 
     @:allow(engine.input.Dispatcher)
