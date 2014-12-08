@@ -17,6 +17,7 @@ class Menu extends UIElement implements IHoverable{
     var hover:Bool;
     var children : Array<UIElement>;
 
+
     public function new(parent : UIElement = null, pos : Vector3, size : Vector3) {
         super(parent, pos, size);
         children = new Array<UIElement>();

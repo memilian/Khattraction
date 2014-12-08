@@ -20,7 +20,7 @@ class Bullet  extends MovingEntity{
     var maxBuffSize = 5;
     var deadCounter = 0;
     var maxDeadCounter = 60;
-    var maxTimeAlive : Int = 200;
+    var maxTimeAlive : Int = 800;
     var defaultColor = Color.fromBytes(130,240,255,1);
     var speed = 6.0;
     var damage = 1.0;
@@ -67,7 +67,7 @@ class Bullet  extends MovingEntity{
             }
         }
 
-        var walls = WorldManager.the.getEntitiesInAabb(AABB.AabbFromEntity(this).expand(50), Wall);
+        var walls = WorldManager.the.getEntitiesInAabb(AABB.AabbFromEntity(this).expand(50), Wall, true);
         for(wall in walls){
             if(AABB.AabbFromEntity(this).collide(AABB.AabbFromEntity(wall)))
                 isDead = true;

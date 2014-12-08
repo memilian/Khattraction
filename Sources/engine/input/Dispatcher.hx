@@ -64,18 +64,34 @@ class Dispatcher {
         mouseWheelListeners = new Array<Int->Void>();
     }
 
-    public function update(){
-        for(key in keyStates.keys()){
-            if(keyStates.get(key))
-                onKeyPress(key,Type.enumConstructor(key));
+        public function update(){
+            for(key in keyStates.keys()){
+                if(keyStates.get(key))
+                    onKeyPress(key,Type.enumConstructor(key));
+            }
+            for(char in keyCharStates.keys()){
+                if(keyCharStates.get(char))
+                    onKeyPress(Key.CHAR,char);
+            }
         }
-        for(char in keyCharStates.keys()){
-            if(keyCharStates.get(char))
-                onKeyPress(Key.CHAR,char);
-        }
-    }
 
-    public function mouseNotify(downListener: Int->Int->Int->Void, upListener: Int->Int->Int->Void,
+        public function mouseRemove(downListener: Int->Int->Int->Void, upListener: Int->Int->Int->Void,
+                                    dragListener: Int->Int->Int->Void, moveListener: Int->Int->Void, wheelListener: Int->Void): Void {
+            if (downListener != null) mouseDownListeners.remove(downListener);
+            if (upListener != null) mouseUpListeners.remove(upListener);
+            if(dragListener != null) mouseDragListeners.remove(dragListener);
+            if(moveListener != null) mouseMoveListeners.remove(moveListener);
+            if(wheelListener != null) mouseWheelListeners.remove(wheelListener);
+        }
+
+        public function keyRemove(downListener: Key->String->Void, upListener: Key->String->Void, ?pressListener: Key->String->Void): Void {
+            if (downListener != null) downListeners.remove(downListener);
+            if (upListener != null) upListeners.remove(upListener);
+            if(pressListener != null) pressListeners.remove(pressListener);
+        }
+
+
+        public function mouseNotify(downListener: Int->Int->Int->Void, upListener: Int->Int->Int->Void,
                                 dragListener: Int->Int->Int->Void, moveListener: Int->Int->Void, wheelListener: Int->Void): Void {
         if (downListener != null) mouseDownListeners.push(downListener);
         if (upListener != null) mouseUpListeners.push(upListener);
@@ -83,6 +99,7 @@ class Dispatcher {
         if(moveListener != null) mouseMoveListeners.push(moveListener);
         if(wheelListener != null) mouseWheelListeners.push(wheelListener);
     }
+
     public function notify(downListener: Key->String->Void, upListener: Key->String->Void, ?pressListener: Key->String->Void): Void {
         if (downListener != null) downListeners.push(downListener);
         if (upListener != null) upListeners.push(upListener);

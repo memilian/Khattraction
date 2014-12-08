@@ -1,5 +1,6 @@
 package khattraction.entities;
 
+import motion.easing.Linear;
 import kha.math.Random;
 import motion.Actuate;
 import engine.ui.IResizable;
@@ -26,8 +27,10 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
     public var hover:Bool;
     public var dragging:Bool;
     public var locked : Bool = false;
-    public var minSize:Float = 50;
+    public var minSize:Float = 40;
     public var maxSize:Float = 400;
+    public var maxStrength:Float = 100;
+    public var minStrength:Float = 5;
     @:isVar public var forceRadius(default, default):Float;
     @:isVar public var forceStrength(default, default):Float;
     public var inverseStrength : Bool;
@@ -46,10 +49,19 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
         this.forceStrength = inverseStrength?forceStrength*-1:forceStrength;
         this.inverseStrength = (this.forceStrength<0);
 
+        if(inverseStrength){
+            var tmp = minStrength;
+            minStrength = -1*maxStrength;
+            maxStrength = -1*tmp;
+        }
         image = Loader.the.getImage("bullet");
         Dispatcher.get().mouseNotify(mouseDown,mouseUp,onMouseDragged,onMouseMoved,onMouseWheel);
         fxArr = new Array<GravObjFx>();
         Actuate.tween(this, 3,{sine:360}).repeat().reflect().smartRotation();
+    }
+
+    override public function onDestroy(){
+        Dispatcher.get().mouseRemove(mouseDown,mouseUp,onMouseDragged,onMouseMoved,onMouseWheel);
     }
 
     //Currently broken
@@ -61,28 +73,26 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
     public function onMouseDragged(button:Int, dx:Int, dy:Int):Void {
         if(locked)
             return;
+        if(hover)
+            dragging = true;
         if(selected && button == Dispatcher.BUTTON_LEFT){
             if(!KhattractionGame.gameBounds.contains(new Vector3(position.x+dx, position.y+dy,0)))
                 return;
             position.x += dx;
             position.y += dy;
+        }else if(selected && button == Dispatcher.BUTTON_RIGHT){
+            if(Math.abs(dx)>Math.abs(dy))
+                resizeStrength(dx);
+           /* else
+                resizeRadius(dy);*/
         }
     }
 
     public function mouseUp(button:Int, x:Int, y:Int){
         if(locked)
             return;
-        if(selected){
-            selected = false;
-        }
-    }
 
-    public function mouseDown(button:Int, x:Int, y:Int){
-        if(locked)
-            return;
-        if(hover && button == Dispatcher.BUTTON_LEFT){
-            selected = true;
-        }else if(hover && button == Dispatcher.BUTTON_RIGHT){
+        if(!dragging && selected && button == Dispatcher.BUTTON_RIGHT){
             isDead = true;
             for(fx in fxArr){
                 fx.ttl = 0;
@@ -93,13 +103,25 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
                 WorldManager.the.removeEntity(this);
             });
         }
+        if(selected)
+            selected = false;
+        if(dragging)
+            dragging = false;
+    }
+
+    public function mouseDown(button:Int, x:Int, y:Int){
+        if(locked)
+            return;
+        if(hover){
+            selected = true;
+        }
     }
 
 
     public function onMouseMoved(x:Int, y:Int):Void {
-        if(locked)
+        if(locked || dragging)
             return;
-        if(AABB.AabbFromEntity(this).contains(new Vector3(x,y)))
+        if( AABB.AabbFromEntity(this).contains(new Vector3(x,y)))
             hover = true;
         else
             hover = false;
@@ -119,6 +141,22 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
             entity.velocity = entity.velocity.add(steer.mult(inverseStrength?0.1:0.3));
         else
             entity.velocity = entity.velocity.add(steer);
+    }
+
+    override public function fadeOut(){
+        inverseStrength = true;
+
+        Actuate.tween(this, 2, {forceStrength:-100*forceStrength}).ease(Linear.easeNone);
+    }
+
+    public function resizeStrength(ds : Int):Void {
+        if(forceStrength+ds < maxStrength && forceStrength+ds > minStrength)
+            forceStrength += ds;
+    }
+
+    public function resizeRadius(dr : Int):Void {
+       /* if(forceRadius+dr < maxSize && forceRadius+dr > minSize)
+            forceRadius += dr;*/
     }
 
     override public function update(){
@@ -144,7 +182,7 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
         var radius = inverseStrength?5:size.x;
         var angle = sine/5;
         var sineRatio = sine/360;
-        for(i in 0...5){
+        for(i in 0...3){
 
             var pos = center.add(new Vector3(
                 (Math.cos(angle*(i+1)) * radius),

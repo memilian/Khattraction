@@ -1,4 +1,5 @@
 package engine.world;
+import khattraction.entities.Wall;
 import khattraction.entities.Bullet;
 import kha.graphics2.Graphics;
 import khattraction.entities.Entity;
@@ -54,12 +55,17 @@ class WorldPart {
                 entities.remove(ent);
             }
 
-            if(!bounds.contains(ent.position)){
+            if(!bounds.contains(ent.position) && Type.getClass(ent) != Wall){
                 entitiesToRemove.push(ent);
                 if(!WorldManager.the.placeLater(ent))
                     entitiesToRemove.push(ent);
             }
         }
+    }
+
+    public function destroyEntity(ent :Entity){
+        ent.onDestroy();
+        entities.remove(ent);
     }
 
 
@@ -71,17 +77,18 @@ class WorldPart {
         entitiesOverlapping.remove(ent);
     }
 
-    public function getEntitiesOfType(fake : Entity) : Array<Entity>{
+    public function getEntitiesOfType(fake : Entity, includeOverlapping : Bool = false) : Array<Entity>{
         var res = new Array<Entity>();
         for(ent in entities){
             if(Type.getClass(ent) == Type.getClass(fake)){
                 res.push(ent);
             }
         }
-
-        for(ent in entitiesOverlapping){
-            if(Type.getClass(ent) == Type.getClass(fake)){
-                res.push(ent);
+        if(includeOverlapping){
+            for(ent in entitiesOverlapping){
+                if(Type.getClass(ent) == Type.getClass(fake)){
+                    res.push(ent);
+                }
             }
         }
 
@@ -89,6 +96,9 @@ class WorldPart {
     }
 
     public function clearAll(){
+        for(ent in entities){
+            ent.onDestroy();
+        }
         entities = new Array<Entity>();
         entitiesToAdd = new Array<Entity>();
         entitiesToRemove = new Array<Entity>();

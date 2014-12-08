@@ -1,5 +1,6 @@
 package khattraction;
 
+import engine.ui.Label;
 import khattraction.level.LevelManager;
 import kha.CanvasImage;
 import kha.Canvas;
@@ -28,14 +29,12 @@ class KhattractionGame extends Game {
 
 	public static var instance : KhattractionGame;
 	var backBuffer : Image;
-	var bulletLauncher : BulletLauncher;
 	var lastUpdate : Float = 0;
 	var lastRender : Float = 0;
 	var inidone = false;
 
-
 	public static var gameBounds : AABB;
-	var menu : Menu;
+	@:isVar public var menu(default,default) : IGMenu;
 
 	public function new() {
 		super("Khattraction", false);
@@ -48,7 +47,6 @@ class KhattractionGame extends Game {
 		Random.init(Math.floor(Date.now().getTime()));
 		Loader.the.loadRoom("main", loadDone);
 		backBuffer = Image.createRenderTarget(width, height);
-
 		WorldManager.createInstance(6,3,200,190);
 	}
 
@@ -56,6 +54,7 @@ class KhattractionGame extends Game {
 		Configuration.setScreen(this);
 		gameBounds = new AABB(new Vector3(0,0,0),new Vector3(width,height,0));
 		//initLevel();
+		LevelManager.getLevelCount();
 		LevelManager.loadLevel(1);
 		menu = new IGMenu();
 

@@ -18,7 +18,7 @@ class AABB {
         this.size = size;
     }
     public static function AabbFromEntity(ent : Entity) {
-        return new AABB(ent.position,ent.size);
+        return new AABB(ent.position.mult(1),ent.size.mult(1));
     }
 
     public function expand(amount : Float) {

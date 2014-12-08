@@ -402,6 +402,18 @@ engine.input.Dispatcher.prototype = {
 			if(this.keyCharStates.get($char)) this.onKeyPress(kha.Key.CHAR,$char);
 		}
 	}
+	,mouseRemove: function(downListener,upListener,dragListener,moveListener,wheelListener) {
+		if(downListener != null) HxOverrides.remove(this.mouseDownListeners,downListener);
+		if(upListener != null) HxOverrides.remove(this.mouseUpListeners,upListener);
+		if(dragListener != null) HxOverrides.remove(this.mouseDragListeners,dragListener);
+		if(moveListener != null) HxOverrides.remove(this.mouseMoveListeners,moveListener);
+		if(wheelListener != null) HxOverrides.remove(this.mouseWheelListeners,wheelListener);
+	}
+	,keyRemove: function(downListener,upListener,pressListener) {
+		if(downListener != null) HxOverrides.remove(this.downListeners,downListener);
+		if(upListener != null) HxOverrides.remove(this.upListeners,upListener);
+		if(pressListener != null) HxOverrides.remove(this.pressListeners,pressListener);
+	}
 	,mouseNotify: function(downListener,upListener,dragListener,moveListener,wheelListener) {
 		if(downListener != null) this.mouseDownListeners.push(downListener);
 		if(upListener != null) this.mouseUpListeners.push(upListener);
@@ -528,7 +540,7 @@ engine.physic.AABB = function(position,size) {
 $hxClasses["engine.physic.AABB"] = engine.physic.AABB;
 engine.physic.AABB.__name__ = ["engine","physic","AABB"];
 engine.physic.AABB.AabbFromEntity = function(ent) {
-	return new engine.physic.AABB(ent.position,ent.size);
+	return new engine.physic.AABB(ent.position.mult(1),ent.size.mult(1));
 };
 engine.physic.AABB.prototype = {
 	update: function(pos,size) {
@@ -675,6 +687,53 @@ engine.ui.IResizable.__name__ = ["engine","ui","IResizable"];
 engine.ui.IResizable.prototype = {
 	__class__: engine.ui.IResizable
 };
+engine.ui.Label = function(parent,position,text) {
+	this.text = text;
+	this.padding = new kha.math.Vector2(5,2);
+	this.font = kha.Loader.the.loadFont("Roboto",new kha.FontStyle(false,false,false),18);
+	engine.ui.UIElement.call(this,parent,position,new kha.math.Vector3(this.font.stringWidth(text),this.font.getHeight(),0));
+};
+$hxClasses["engine.ui.Label"] = engine.ui.Label;
+engine.ui.Label.__name__ = ["engine","ui","Label"];
+engine.ui.Label.__interfaces__ = [engine.ui.IDisplayText];
+engine.ui.Label.create = function(parent) {
+	return new engine.ui.Label(parent,new kha.math.Vector3(0,0,0),"");
+};
+engine.ui.Label.__super__ = engine.ui.UIElement;
+engine.ui.Label.prototype = $extend(engine.ui.UIElement.prototype,{
+	updateSize: function() {
+		this.size.x = this.font.stringWidth(this.text) + this.padding.x;
+		this.size.y = this.font.getHeight() + this.padding.y;
+	}
+	,setText: function(txt) {
+		this.text = txt;
+		this.updateSize();
+		return this;
+	}
+	,setPosition: function(x,y,z) {
+		engine.ui.UIElement.prototype.setPosition.call(this,x,y,z);
+		return this;
+	}
+	,setSize: function(w,h) {
+		engine.ui.UIElement.prototype.setSize.call(this,w,h);
+		return this;
+	}
+	,update: function() {
+		this.bounds.update(this.get_realPosition(),this.size);
+	}
+	,render: function(g) {
+		engine.ui.UIElement.prototype.render.call(this,g);
+		g.set_font(this.font);
+		g.set_color(kha._Color.Color_Impl_.Cyan);
+		g.fillRect(this.get_realPosition().x,this.get_realPosition().y,this.size.x,this.size.y);
+		g.set_color(kha._Color.Color_Impl_.Black);
+		var textW = this.font.stringWidth(this.text);
+		var tX = this.bounds.getCenter().x - textW / 2;
+		var tY = this.bounds.getCenter().y - this.font.getHeight() / 2;
+		g.drawString(this.text,tX,tY);
+	}
+	,__class__: engine.ui.Label
+});
 engine.ui.Menu = function(parent,pos,size) {
 	engine.ui.UIElement.call(this,parent,pos,size);
 	this.children = new Array();
@@ -780,6 +839,19 @@ engine.world.WorldManager.prototype = {
 			}
 		}
 	}
+	,destroyEntity: function(ent) {
+		var part = this.getPartForEntity(ent);
+		if(part != null) {
+			part.destroyEntity(ent);
+			var overlapParts = this.getPartsInAabb(engine.physic.AABB.AabbFromEntity(ent));
+			var _g = 0;
+			while(_g < overlapParts.length) {
+				var p = overlapParts[_g];
+				++_g;
+				if(p != part) p.removeOverlappingEntity(ent);
+			}
+		}
+	}
 	,spawnEntity: function(ent) {
 		var part = this.getPartForEntity(ent);
 		if(part != null) {
@@ -851,7 +923,8 @@ engine.world.WorldManager.prototype = {
 			return true;
 		} else return false;
 	}
-	,getEntitiesInAabb: function(aabb,type) {
+	,getEntitiesInAabb: function(aabb,type,includeOverlapping) {
+		if(includeOverlapping == null) includeOverlapping = false;
 		var it = this.worldParts.keys();
 		var res = new Array();
 		while(it.hasNext()) {
@@ -859,7 +932,23 @@ engine.world.WorldManager.prototype = {
 			var key = it.next();
 			part = this.worldParts.h[key.__id__];
 			if(!part.bounds.collide(aabb)) continue;
-			var arr = part.getEntitiesOfType(Type.createInstance(type,new Array()));
+			var shallowEnt = Type.createInstance(type,new Array());
+			var arr = part.getEntitiesOfType(shallowEnt,includeOverlapping);
+			shallowEnt.onDestroy();
+			res = res.concat(arr);
+		}
+		return res;
+	}
+	,getEntitiesOfType: function(type) {
+		var it = this.worldParts.keys();
+		var res = new Array();
+		while(it.hasNext()) {
+			var part;
+			var key = it.next();
+			part = this.worldParts.h[key.__id__];
+			var shallowEnt = Type.createInstance(type,new Array());
+			var arr = part.getEntitiesOfType(shallowEnt);
+			shallowEnt.onDestroy();
 			res = res.concat(arr);
 		}
 		return res;
@@ -911,11 +1000,15 @@ engine.world.WorldPart.prototype = {
 			++_g;
 			ent.update();
 			if(Type.getClass(ent) == khattraction.entities.Bullet && (js.Boot.__cast(ent , khattraction.entities.Bullet)).shouldBeDead) HxOverrides.remove(this.entities,ent);
-			if(!this.bounds.contains(ent.position)) {
+			if(!this.bounds.contains(ent.position) && Type.getClass(ent) != khattraction.entities.Wall) {
 				this.entitiesToRemove.push(ent);
 				if(!engine.world.WorldManager.the.placeLater(ent)) this.entitiesToRemove.push(ent);
 			}
 		}
+	}
+	,destroyEntity: function(ent) {
+		ent.onDestroy();
+		HxOverrides.remove(this.entities,ent);
 	}
 	,addOverlappingEntity: function(ent) {
 		this.entitiesOverlapping.push(ent);
@@ -923,7 +1016,8 @@ engine.world.WorldPart.prototype = {
 	,removeOverlappingEntity: function(ent) {
 		HxOverrides.remove(this.entitiesOverlapping,ent);
 	}
-	,getEntitiesOfType: function(fake) {
+	,getEntitiesOfType: function(fake,includeOverlapping) {
+		if(includeOverlapping == null) includeOverlapping = false;
 		var res = new Array();
 		var _g = 0;
 		var _g1 = this.entities;
@@ -932,16 +1026,25 @@ engine.world.WorldPart.prototype = {
 			++_g;
 			if(Type.getClass(ent) == Type.getClass(fake)) res.push(ent);
 		}
-		var _g2 = 0;
-		var _g11 = this.entitiesOverlapping;
-		while(_g2 < _g11.length) {
-			var ent1 = _g11[_g2];
-			++_g2;
-			if(Type.getClass(ent1) == Type.getClass(fake)) res.push(ent1);
+		if(includeOverlapping) {
+			var _g2 = 0;
+			var _g11 = this.entitiesOverlapping;
+			while(_g2 < _g11.length) {
+				var ent1 = _g11[_g2];
+				++_g2;
+				if(Type.getClass(ent1) == Type.getClass(fake)) res.push(ent1);
+			}
 		}
 		return res;
 	}
 	,clearAll: function() {
+		var _g = 0;
+		var _g1 = this.entities;
+		while(_g < _g1.length) {
+			var ent = _g1[_g];
+			++_g;
+			ent.onDestroy();
+		}
 		this.entities = new Array();
 		this.entitiesToAdd = new Array();
 		this.entitiesToRemove = new Array();
@@ -9417,6 +9520,7 @@ khattraction.KhattractionGame.prototype = $extend(kha.Game.prototype,{
 	,loadDone: function() {
 		kha.Configuration.setScreen(this);
 		khattraction.KhattractionGame.gameBounds = new engine.physic.AABB(new kha.math.Vector3(0,0,0),new kha.math.Vector3(this.width,this.height,0));
+		khattraction.level.LevelManager.getLevelCount();
 		khattraction.level.LevelManager.loadLevel(1);
 		this.menu = new khattraction.ui.IGMenu();
 		this.inidone = true;
@@ -9469,6 +9573,19 @@ khattraction.entities.Entity.prototype = {
 	}
 	,render: function(g) {
 	}
+	,onDestroy: function() {
+	}
+	,fadeOut: function() {
+		motion.Actuate.tween(this.size,0.5,{ x : 0}).ease(motion.easing.Linear.get_easeNone());
+		motion.Actuate.tween(this.size,0.5,{ y : 0}).ease(motion.easing.Linear.get_easeNone());
+	}
+	,fadeIn: function() {
+		var normSize = this.size.mult(1);
+		this.size.x = 0;
+		this.size.y = 0;
+		motion.Actuate.tween(this.size,0.5,{ x : normSize.x}).ease(motion.easing.Linear.get_easeNone());
+		motion.Actuate.tween(this.size,0.5,{ y : normSize.y}).ease(motion.easing.Linear.get_easeNone());
+	}
 	,__class__: khattraction.entities.Entity
 };
 khattraction.entities.MovingEntity = function(position,size,initialVelocity) {
@@ -9504,7 +9621,7 @@ khattraction.entities.Bullet = function(position,size,initialVelocity) {
 	this.damage = 1.0;
 	this.speed = 6.0;
 	this.defaultColor = 25358591;
-	this.maxTimeAlive = 200;
+	this.maxTimeAlive = 800;
 	this.maxDeadCounter = 60;
 	this.deadCounter = 0;
 	this.maxBuffSize = 5;
@@ -9539,7 +9656,7 @@ khattraction.entities.Bullet.prototype = $extend(khattraction.entities.MovingEnt
 			this.isDead = true;
 			while(engine.world.WorldManager.the.getPartForEntity(this) == null) this.position = this.position.sub(this.get_velocity());
 		}
-		var walls = engine.world.WorldManager.the.getEntitiesInAabb(engine.physic.AABB.AabbFromEntity(this).expand(50),khattraction.entities.Wall);
+		var walls = engine.world.WorldManager.the.getEntitiesInAabb(engine.physic.AABB.AabbFromEntity(this).expand(50),khattraction.entities.Wall,true);
 		var _g = 0;
 		while(_g < walls.length) {
 			var wall = walls[_g];
@@ -9598,9 +9715,9 @@ khattraction.entities.Bullet.prototype = $extend(khattraction.entities.MovingEnt
 	,__class__: khattraction.entities.Bullet
 });
 khattraction.entities.BulletLauncher = function(position) {
-	this.freq = 0.005;
+	this.freq = 0.2;
 	this.lastShoot = 0.0;
-	this.turnSpeed = 3;
+	this.turnSpeed = 1;
 	khattraction.entities.Entity.call(this,position,new kha.math.Vector3(40,10,0));
 	this.angle = 0;
 	engine.input.Dispatcher.get().notify(null,null,$bind(this,this.onKeyPress));
@@ -9610,13 +9727,18 @@ $hxClasses["khattraction.entities.BulletLauncher"] = khattraction.entities.Bulle
 khattraction.entities.BulletLauncher.__name__ = ["khattraction","entities","BulletLauncher"];
 khattraction.entities.BulletLauncher.__super__ = khattraction.entities.Entity;
 khattraction.entities.BulletLauncher.prototype = $extend(khattraction.entities.Entity.prototype,{
-	onKeyPress: function(key,str) {
+	onDestroy: function() {
+		engine.input.Dispatcher.get().keyRemove(null,null,$bind(this,this.onKeyPress));
+	}
+	,onKeyPress: function(key,str) {
 		if(key == kha.Key.CHAR && (str == "z" || str == "w")) this.angle -= this.turnSpeed;
 		if(key == kha.Key.CHAR && str == "s") this.angle += this.turnSpeed;
 		if(key == kha.Key.CHAR && str == " ") this.launchBullet();
 	}
 	,launchBullet: function() {
-		if(haxe.Timer.stamp() - this.lastShoot < this.freq) return;
+		var ammoCount = khattraction.level.LevelManager.currentLevel.ammo;
+		if(haxe.Timer.stamp() - this.lastShoot < this.freq || ammoCount <= 0) return;
+		khattraction.level.LevelManager.decreaseAmmo();
 		this.lastShoot = haxe.Timer.stamp();
 		var bulletVel = new kha.math.Vector3(Math.cos(khattraction.mathutils.Utils.toRadian(this.angle)),Math.sin(khattraction.mathutils.Utils.toRadian(this.angle)),0);
 		var b = new khattraction.entities.Bullet(new kha.math.Vector3(this.position.x,this.position.y,this.position.z),new kha.math.Vector3(8,8,0),bulletVel);
@@ -9670,6 +9792,10 @@ khattraction.entities.GravObjFx.prototype = $extend(khattraction.entities.Moving
 			});
 		}
 	}
+	,fadeOut: function() {
+		motion.Actuate.tween(this.size,2,{ x : 100}).ease(motion.easing.Linear.get_easeNone());
+		motion.Actuate.tween(this.size,2,{ y : 100}).ease(motion.easing.Linear.get_easeNone());
+	}
 	,render: function(g) {
 		if(this.isDead) return;
 		g.set_color(this.color);
@@ -9685,14 +9811,21 @@ khattraction.entities.GravitationalObject = function(position,inverseStrength,fo
 	if(inverseStrength == null) inverseStrength = false;
 	this.maxInfluence = 5;
 	this.sine = 0.0;
+	this.minStrength = 5;
+	this.maxStrength = 100;
 	this.maxSize = 400;
-	this.minSize = 50;
+	this.minSize = 40;
 	this.locked = false;
 	khattraction.entities.Entity.call(this,position,new kha.math.Vector3(60,60,0));
 	this.zindex = 50;
 	this.forceRadius = forceRadius;
 	if(inverseStrength) this.forceStrength = forceStrength * -1; else this.forceStrength = forceStrength;
 	this.inverseStrength = this.forceStrength < 0;
+	if(inverseStrength) {
+		var tmp = this.minStrength;
+		this.minStrength = -1 * this.maxStrength;
+		this.maxStrength = -1 * tmp;
+	}
 	this.image = kha.Loader.the.getImage("bullet");
 	engine.input.Dispatcher.get().mouseNotify($bind(this,this.mouseDown),$bind(this,this.mouseUp),$bind(this,this.onMouseDragged),$bind(this,this.onMouseMoved),$bind(this,this.onMouseWheel));
 	this.fxArr = new Array();
@@ -9703,25 +9836,27 @@ khattraction.entities.GravitationalObject.__name__ = ["khattraction","entities",
 khattraction.entities.GravitationalObject.__interfaces__ = [engine.ui.IResizable,engine.ui.IHoverable,engine.ui.IPlaceable];
 khattraction.entities.GravitationalObject.__super__ = khattraction.entities.Entity;
 khattraction.entities.GravitationalObject.prototype = $extend(khattraction.entities.Entity.prototype,{
-	onMouseWheel: function(dw) {
+	onDestroy: function() {
+		engine.input.Dispatcher.get().mouseRemove($bind(this,this.mouseDown),$bind(this,this.mouseUp),$bind(this,this.onMouseDragged),$bind(this,this.onMouseMoved),$bind(this,this.onMouseWheel));
+	}
+	,onMouseWheel: function(dw) {
 		if(this.hover && this.size.x + dw > this.minSize && this.size.x + dw < this.maxSize) this.size.x += dw;
 	}
 	,onMouseDragged: function(button,dx,dy) {
 		if(this.locked) return;
+		if(this.hover) this.dragging = true;
 		if(this.selected && button == engine.input.Dispatcher.BUTTON_LEFT) {
 			if(!khattraction.KhattractionGame.gameBounds.contains(new kha.math.Vector3(this.position.x + dx,this.position.y + dy,0))) return;
 			this.position.x += dx;
 			this.position.y += dy;
+		} else if(this.selected && button == engine.input.Dispatcher.BUTTON_RIGHT) {
+			if(Math.abs(dx) > Math.abs(dy)) this.resizeStrength(dx);
 		}
 	}
 	,mouseUp: function(button,x,y) {
-		if(this.locked) return;
-		if(this.selected) this.selected = false;
-	}
-	,mouseDown: function(button,x,y) {
 		var _g = this;
 		if(this.locked) return;
-		if(this.hover && button == engine.input.Dispatcher.BUTTON_LEFT) this.selected = true; else if(this.hover && button == engine.input.Dispatcher.BUTTON_RIGHT) {
+		if(!this.dragging && this.selected && button == engine.input.Dispatcher.BUTTON_RIGHT) {
 			this.isDead = true;
 			var _g1 = 0;
 			var _g11 = this.fxArr;
@@ -9736,9 +9871,15 @@ khattraction.entities.GravitationalObject.prototype = $extend(khattraction.entit
 				engine.world.WorldManager.the.removeEntity(_g);
 			});
 		}
+		if(this.selected) this.selected = false;
+		if(this.dragging) this.dragging = false;
+	}
+	,mouseDown: function(button,x,y) {
+		if(this.locked) return;
+		if(this.hover) this.selected = true;
 	}
 	,onMouseMoved: function(x,y) {
-		if(this.locked) return;
+		if(this.locked || this.dragging) return;
 		if(engine.physic.AABB.AabbFromEntity(this).contains(new kha.math.Vector3(x,y))) this.hover = true; else this.hover = false;
 	}
 	,applyInfluence: function(entity) {
@@ -9751,6 +9892,15 @@ khattraction.entities.GravitationalObject.prototype = $extend(khattraction.entit
 			steer = steer.mult(this.maxInfluence);
 		}
 		if(Type.getClass(entity) == khattraction.entities.GravObjFx) entity.set_velocity(entity.get_velocity().add(steer.mult(this.inverseStrength?0.1:0.3))); else entity.set_velocity(entity.get_velocity().add(steer));
+	}
+	,fadeOut: function() {
+		this.inverseStrength = true;
+		motion.Actuate.tween(this,2,{ forceStrength : -100 * this.forceStrength}).ease(motion.easing.Linear.get_easeNone());
+	}
+	,resizeStrength: function(ds) {
+		if(this.forceStrength + ds < this.maxStrength && this.forceStrength + ds > this.minStrength) this.forceStrength += ds;
+	}
+	,resizeRadius: function(dr) {
 	}
 	,update: function() {
 		khattraction.entities.Entity.prototype.update.call(this);
@@ -9780,7 +9930,7 @@ khattraction.entities.GravitationalObject.prototype = $extend(khattraction.entit
 		var angle = this.sine / 5;
 		var sineRatio = this.sine / 360;
 		var _g2 = 0;
-		while(_g2 < 5) {
+		while(_g2 < 3) {
 			var i = _g2++;
 			var pos = this.center.add(new kha.math.Vector3(Math.cos(angle * (i + 1)) * radius,Math.sin(angle * (i + 1)) * radius,0));
 			var baseSize;
@@ -9816,7 +9966,7 @@ khattraction.entities.Target.prototype = $extend(khattraction.entities.Entity.pr
 	update: function() {
 		khattraction.entities.Entity.prototype.update.call(this);
 		if(this.life < 0) {
-			if(this.deadCounter++ > this.maxDeadCounter) khattraction.level.LevelManager.loadNext();
+			if(this.deadCounter++ == this.maxDeadCounter) khattraction.level.LevelManager.loadNext();
 		}
 	}
 	,render: function(g) {
@@ -9861,19 +10011,20 @@ khattraction.level.LevelManager = function() { };
 $hxClasses["khattraction.level.LevelManager"] = khattraction.level.LevelManager;
 khattraction.level.LevelManager.__name__ = ["khattraction","level","LevelManager"];
 khattraction.level.LevelManager.loadLevel = function(nb) {
+	khattraction.level.LevelManager.currentLevelNumber = nb;
 	engine.world.WorldManager.the.clearAll();
 	var lvlData = kha.Loader.the.getBlob("level" + nb).toString();
 	khattraction.level.LevelManager.currentLevel = JSON.parse(lvlData);
-	var bulletLauncher = new khattraction.entities.BulletLauncher(khattraction.level.LevelManager.currentLevel.launcherPos);
+	var bulletLauncher = new khattraction.entities.BulletLauncher(khattraction.level.LevelManager.parseJsonVector(khattraction.level.LevelManager.currentLevel.launcherPos));
 	engine.world.WorldManager.the.spawnEntity(bulletLauncher);
-	var target = new khattraction.entities.Target(khattraction.level.LevelManager.currentLevel.targetPos);
+	var target = new khattraction.entities.Target(khattraction.level.LevelManager.parseJsonVector(khattraction.level.LevelManager.currentLevel.targetPos));
 	engine.world.WorldManager.the.spawnEntity(target);
 	var _g = 0;
 	var _g1 = khattraction.level.LevelManager.currentLevel.walls;
 	while(_g < _g1.length) {
 		var walljs = _g1[_g];
 		++_g;
-		var wall = new khattraction.entities.Wall(walljs.position,walljs.size);
+		var wall = new khattraction.entities.Wall(khattraction.level.LevelManager.parseJsonVector(walljs.position),khattraction.level.LevelManager.parseJsonVector(walljs.size));
 		engine.world.WorldManager.the.spawnEntity(wall);
 	}
 	var _g2 = 0;
@@ -9881,11 +10032,43 @@ khattraction.level.LevelManager.loadLevel = function(nb) {
 	while(_g2 < _g11.length) {
 		var attr = _g11[_g2];
 		++_g2;
-		var attra = new khattraction.entities.GravitationalObject(attr.position,false,attr.forceStrength,attr.forceRadius);
+		var attra = new khattraction.entities.GravitationalObject(khattraction.level.LevelManager.parseJsonVector(attr.position),false,attr.forceStrength,attr.forceRadius);
+		attra.locked = true;
 		engine.world.WorldManager.the.spawnEntity(attra);
 	}
+	var _g3 = 0;
+	var _g12 = engine.world.WorldManager.the.getEntities();
+	while(_g3 < _g12.length) {
+		var ent = _g12[_g3];
+		++_g3;
+		ent.fadeIn();
+	}
+};
+khattraction.level.LevelManager.reload = function() {
+	var _g = 0;
+	var _g1 = engine.world.WorldManager.the.getEntities();
+	while(_g < _g1.length) {
+		var ent = _g1[_g];
+		++_g;
+		ent.fadeOut();
+	}
+	motion.Actuate.timer(0.6).onComplete(function() {
+		khattraction.level.LevelManager.loadLevel(khattraction.level.LevelManager.currentLevelNumber);
+		khattraction.KhattractionGame.instance.menu.updateAmmo(khattraction.level.LevelManager.currentLevel.ammo);
+	});
 };
 khattraction.level.LevelManager.loadNext = function() {
+	var _g = 0;
+	var _g1 = engine.world.WorldManager.the.getEntities();
+	while(_g < _g1.length) {
+		var ent = _g1[_g];
+		++_g;
+		ent.fadeOut();
+	}
+	motion.Actuate.timer(0.6).onComplete(function() {
+		if(khattraction.level.LevelManager.currentLevelNumber + 1 <= khattraction.level.LevelManager.levelCount) khattraction.level.LevelManager.loadLevel(khattraction.level.LevelManager.currentLevelNumber + 1); else khattraction.level.LevelManager.loadLevel(1);
+		khattraction.KhattractionGame.instance.menu.updateAmmo(khattraction.level.LevelManager.currentLevel.ammo);
+	});
 };
 khattraction.level.LevelManager.getLevelCount = function() {
 	if(khattraction.level.LevelManager.levelCount == 0) {
@@ -9894,6 +10077,12 @@ khattraction.level.LevelManager.getLevelCount = function() {
 		khattraction.level.LevelManager.levelCount = tmp.levelCount;
 	}
 	return khattraction.level.LevelManager.levelCount;
+};
+khattraction.level.LevelManager.decreaseAmmo = function() {
+	khattraction.KhattractionGame.instance.menu.updateAmmo(--khattraction.level.LevelManager.currentLevel.ammo);
+};
+khattraction.level.LevelManager.parseJsonVector = function(o) {
+	return new kha.math.Vector3(o.x,o.y,o.z);
 };
 khattraction.mathutils = {};
 khattraction.mathutils.Utils = function() { };
@@ -9915,6 +10104,8 @@ khattraction.mathutils.Utils.distanceSq = function(v,v2) {
 };
 khattraction.ui = {};
 khattraction.ui.IGMenu = function() {
+	this.wallHeight = 20;
+	this.wallWidth = 20;
 	this.gameHeight = khattraction.KhattractionGame.instance.height;
 	this.gameWidth = khattraction.KhattractionGame.instance.width;
 	engine.ui.Menu.call(this,null,new kha.math.Vector3(0,this.gameHeight - 100,0),new kha.math.Vector3(this.gameWidth,100,0));
@@ -9936,12 +10127,29 @@ khattraction.ui.IGMenu = function() {
 		engine.world.WorldManager.the.spawnEntity(rep);
 	};
 	this.children.push(repulsorBtn);
+	var nextLvlBtn = engine.ui.Button.create(this).setPosition(this.gameWidth - 160,10,0).setSize(80,20).setText("Next level");
+	nextLvlBtn.onClick = function(mouseDown2) {
+		if(!mouseDown2) return;
+		khattraction.level.LevelManager.loadNext();
+	};
+	this.children.push(nextLvlBtn);
+	var restartLvlBtn = engine.ui.Button.create(this).setPosition(this.gameWidth - 160,40,0).setSize(80,20).setText("Restart level");
+	restartLvlBtn.onClick = function(mouseDown3) {
+		if(!mouseDown3) return;
+		khattraction.level.LevelManager.reload();
+	};
+	this.children.push(restartLvlBtn);
+	this.ammoCounter = engine.ui.Label.create(this).setPosition(10,0,0).setText("ammo : " + khattraction.level.LevelManager.currentLevel.ammo);
+	this.children.push(this.ammoCounter);
 };
 $hxClasses["khattraction.ui.IGMenu"] = khattraction.ui.IGMenu;
 khattraction.ui.IGMenu.__name__ = ["khattraction","ui","IGMenu"];
 khattraction.ui.IGMenu.__super__ = engine.ui.Menu;
 khattraction.ui.IGMenu.prototype = $extend(engine.ui.Menu.prototype,{
-	update: function() {
+	updateAmmo: function(ammo) {
+		this.ammoCounter.setText("ammo : " + ammo);
+	}
+	,update: function() {
 		engine.ui.Menu.prototype.update.call(this);
 	}
 	,render: function(g) {

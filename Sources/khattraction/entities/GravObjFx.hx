@@ -1,4 +1,6 @@
 package khattraction.entities;
+import motion.easing.Linear;
+import motion.easing.Linear;
 import motion.Actuate;
 import haxe.Timer;
 import engine.world.WorldManager;
@@ -34,6 +36,11 @@ class GravObjFx extends MovingEntity{
                 WorldManager.the.removeEntity(this);
             });
         }
+    }
+
+    override public function fadeOut(){
+        Actuate.tween(size, 2, {x:100}).ease(Linear.easeNone);
+        Actuate.tween(size, 2, {y:100}).ease(Linear.easeNone);
     }
 
     override public function render(g:Graphics):Void {

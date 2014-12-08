@@ -1,22 +1,27 @@
 package khattraction.level;
 
-import kha.math.Vector3;
 
 typedef LevelJson = {
-    var level : Int;
-    var launcherPos : Vector3;
-    var targetPos : Vector3;
+    var ammo : Int;
+    var launcherPos : Vector3Json;
+    var targetPos : Vector3Json;
     var walls : Array<WallJson>;
     var attractors : Array<AttractorJson>;
 }
 
 typedef WallJson = {
-    var position : Vector3;
-    var size : Vector3;
+    var position : Vector3Json;
+    var size : Vector3Json;
 }
 
 typedef AttractorJson = {
     var forceStrength : Int;
     var forceRadius : Int;
-    var position : Vector3;
+    var position : Vector3Json;
+}
+
+typedef Vector3Json = {
+    var x : Float;
+    var y : Float;
+    var z : Float;
 }

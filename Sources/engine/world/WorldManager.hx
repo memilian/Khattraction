@@ -31,7 +31,7 @@ class WorldManager {
         }
     }
 
-    public function getEntities(){
+    public function getEntities() : Array<Entity>{
         var ents = new Array<Entity>();
         var it = worldParts.keys();
         while(it.hasNext()){
@@ -46,6 +46,18 @@ class WorldManager {
         var part : WorldPart= getPartForEntity(ent);
         if(part != null){
             part.removeEntity(ent);
+            var overlapParts = getPartsInAabb(AABB.AabbFromEntity(ent));
+            for(p in overlapParts){
+                if(p != part)
+                    p.removeOverlappingEntity(ent);
+            }
+        }
+    }
+
+    public function destroyEntity(ent : Entity){
+        var part : WorldPart= getPartForEntity(ent);
+        if(part != null){
+            part.destroyEntity(ent);
             var overlapParts = getPartsInAabb(AABB.AabbFromEntity(ent));
             for(p in overlapParts){
                 if(p != part)
@@ -129,14 +141,29 @@ class WorldManager {
             return false;
     }
 
-    public function getEntitiesInAabb(aabb, type : Class<Entity>) : Array<Entity>{
+    public function getEntitiesInAabb(aabb, type : Class<Entity>, includeOverlapping : Bool = false) : Array<Entity>{
         var it = worldParts.keys();
         var res = new Array();
         while(it.hasNext()){
             var part : WorldPart = worldParts.get(it.next());
             if(!part.bounds.collide(aabb))
                 continue;
-            var arr = part.getEntitiesOfType(Type.createInstance(type, new Array()));
+            var shallowEnt : Entity = Type.createInstance(type, new Array());
+            var arr = part.getEntitiesOfType(shallowEnt, includeOverlapping);
+            shallowEnt.onDestroy();
+            res = res.concat(arr);
+        }
+        return res;
+    }
+
+    public function getEntitiesOfType(type : Class<Entity>) : Array<Entity>{
+        var it = worldParts.keys();
+        var res = new Array();
+        while(it.hasNext()){
+            var part : WorldPart = worldParts.get(it.next());
+            var shallowEnt : Entity = Type.createInstance(type, new Array());
+            var arr = part.getEntitiesOfType(shallowEnt);
+            shallowEnt.onDestroy();
             res = res.concat(arr);
         }
         return res;

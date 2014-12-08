@@ -30,7 +30,7 @@ class Button extends UIElement implements IHoverable implements IClickable imple
         onClick = function(mouseDown:Bool){};
     }
 
-    static public function create(parent:UIElement){
+    static public function create(parent:UIElement) : Button{
         return new Button(parent, new Vector3(0,0,0), new Vector3(0,0,0));
     }
 
@@ -79,6 +79,7 @@ class Button extends UIElement implements IHoverable implements IClickable imple
     override public function update(){
         bounds.update(realPosition,size);
     }
+
     override public function render(g:Graphics){
         super.render(g);
         g.set_font(font);

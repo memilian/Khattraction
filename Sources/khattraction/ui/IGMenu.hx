@@ -1,4 +1,9 @@
 package khattraction.ui;
+import engine.input.Dispatcher;
+import engine.ui.Label;
+import khattraction.level.LevelManager;
+import khattraction.entities.Wall;
+import khattraction.entities.Wall;
 import engine.world.WorldManager;
 import khattraction.entities.GravitationalObject;
 import engine.ui.Button;
@@ -13,6 +18,9 @@ import engine.ui.Menu;
 class IGMenu extends Menu{
     var gameWidth : Int;
     var gameHeight : Int;
+
+    var wallWidth : Int = 20;
+    var wallHeight : Int = 20;
 
     public function new() {
         gameHeight = KhattractionGame.instance.height;
@@ -42,7 +50,52 @@ class IGMenu extends Menu{
         };
         children.push(repulsorBtn);
 
+        var nextLvlBtn = Button.create(this).setPosition(gameWidth-160,10,0).setSize(80,20).setText("Next level");
+        nextLvlBtn.onClick = function(mouseDown:Bool){
+            if(!mouseDown)
+                return;
+            LevelManager.loadNext();
+        };
+        children.push(nextLvlBtn);
 
+        var restartLvlBtn = Button.create(this).setPosition(gameWidth-160,40,0).setSize(80,20).setText("Restart level");
+        restartLvlBtn.onClick = function(mouseDown:Bool){
+            if(!mouseDown)
+                return;
+            LevelManager.reload();
+        };
+        children.push(restartLvlBtn);
+
+        ammoCounter = Label.create(this).setPosition(10,0,0).setText("ammo : "+LevelManager.currentLevel.ammo);
+        children.push(ammoCounter);
+
+
+        //TODO:EDIT_MODE_ONLY
+#if EDITOR_MODE
+        var wallBtn = Button.create(this).setPosition(700,20,0).setSize(100,50).setText("Wall");
+        wallBtn.onClick = function(mouseDown:Bool){
+            if(!mouseDown)
+                return;
+            var wa : Wall = new Wall(new Vector3(wallBtn.realPosition.x,wallBtn.realPosition.y,0), new Vector3(20,20,0));
+            wa.selected = true;
+            WorldManager.the.spawnEntity(wa);
+        };
+        children.push(wallBtn);
+
+        var exportLvl = Button.create(this).setPosition(900,20,0).setSize(100,50).setText("Export Level");
+        exportLvl.onClick = function(mouseDown:Bool){
+            if(mouseDown)
+                return;
+            LevelManager.exportLevel();
+        };
+        children.push(exportLvl);
+        #end
+    }
+
+    var ammoCounter : Label;
+
+    public function updateAmmo(ammo : Int){
+        ammoCounter.setText("ammo : "+ammo);
     }
 
     override public function update(){

@@ -32,6 +32,30 @@
 			"type": "blob",
 			"file": "levels.json",
 			"name": "levels"
+		},
+		{
+			"id": "45f30798-fc5c-4105-9ea0-aaf0defbf3fc",
+			"type": "blob",
+			"file": "level2.json",
+			"name": "level2"
+		},
+		{
+			"id": "6451e085-c862-427f-8f93-720de7ab5287",
+			"type": "blob",
+			"file": "level3.json",
+			"name": "level3"
+		},
+		{
+			"id": "ee5aa7f2-31d2-4da4-aa17-89cf72595d71",
+			"type": "blob",
+			"file": "level4.json",
+			"name": "level4"
+		},
+		{
+			"id": "81ef8442-7345-417d-8c95-771da7b9f25b",
+			"type": "blob",
+			"file": "level5.json",
+			"name": "level5"
 		}
 	],
 	"rooms": [
@@ -44,7 +68,11 @@
 				"49fcc545-106c-4029-81aa-fa3ad3f1a8e7",
 				"36b520f2-ea8a-4d69-9e23-d36b388e1a15",
 				"3127875e-53c1-467b-a307-8239e9a1c158",
-				"8ffcc275-58f3-43fb-a18c-064601d6d699"
+				"8ffcc275-58f3-43fb-a18c-064601d6d699",
+				"45f30798-fc5c-4105-9ea0-aaf0defbf3fc",
+				"6451e085-c862-427f-8f93-720de7ab5287",
+				"ee5aa7f2-31d2-4da4-aa17-89cf72595d71",
+				"81ef8442-7345-417d-8c95-771da7b9f25b"
 			]
 		}
 	],

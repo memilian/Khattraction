@@ -1,5 +1,8 @@
 package khattraction.entities;
 
+import khattraction.level.LevelManager;
+import motion.Actuate;
+import motion.easing.Linear;
 import engine.world.WorldManager;
 import haxe.Timer;
 import engine.input.Dispatcher;
@@ -17,9 +20,9 @@ using khattraction.mathutils.Utils;
 class BulletLauncher extends Entity {
 
     var angle:Float;
-    var turnSpeed = 3;
+    var turnSpeed = 1;
     var lastShoot = 0.0;
-    @:isVar var freq = 0.005;//shoot frequency (s)
+    @:isVar var freq = 0.2;//shoot frequency (s)
 
     public function new(position:Vector3) {
         super(position, new Vector3(40,10,0));
@@ -27,6 +30,12 @@ class BulletLauncher extends Entity {
         Dispatcher.get().notify(null,null,onKeyPress);
         zindex = 100;
     }
+
+    override public function onDestroy(){
+        Dispatcher.get().keyRemove(null,null,onKeyPress);
+    }
+
+
 
     public function onKeyPress(key:Key, str:String):Void {
         if(key == Key.CHAR && (str == 'z' || str == 'w'))
@@ -40,9 +49,10 @@ class BulletLauncher extends Entity {
     }
 
     private function launchBullet():Void {
-
-        if(Timer.stamp()-lastShoot < freq)
+        var ammoCount = LevelManager.currentLevel.ammo;
+        if(Timer.stamp()-lastShoot < freq || ammoCount <= 0)
             return;
+        LevelManager.decreaseAmmo();
         lastShoot = Timer.stamp();
         var bulletVel = new Vector3(Math.cos(angle.toRadian()),Math.sin(angle.toRadian()),0);
         var b = new Bullet(new Vector3(position.x,position.y,position.z), new Vector3(8,8,0),bulletVel);
@@ -73,6 +83,8 @@ class BulletLauncher extends Entity {
         }
 
     }
+
+
 
 /*
         g.set_color(Color.Cyan);

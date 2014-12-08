@@ -1,5 +1,7 @@
 package khattraction.entities;
 
+import motion.easing.Linear;
+import motion.Actuate;
 import kha.graphics2.Graphics;
 import kha.math.Vector3;
 
@@ -24,5 +26,21 @@ class Entity {
 
     public function render(g : Graphics) : Void{
 
+    }
+
+    public function onDestroy(){
+
+    }
+
+    public function fadeOut(){
+        Actuate.tween(size, 0.5, {x:0}).ease(Linear.easeNone);
+        Actuate.tween(size, 0.5, {y:0}).ease(Linear.easeNone);
+    }
+    public function fadeIn(){
+        var normSize = size.mult(1);
+        size.x = 0;
+        size.y = 0;
+        Actuate.tween(size, 0.5, {x:normSize.x}).ease(Linear.easeNone);
+        Actuate.tween(size, 0.5, {y:normSize.y}).ease(Linear.easeNone);
     }
 }
