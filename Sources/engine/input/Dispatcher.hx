@@ -1,7 +1,5 @@
 package engine.input;
 
-import js.Browser;
-import kha.Button;
 import kha.input.Mouse;
 import kha.Key;
 import kha.input.Keyboard;

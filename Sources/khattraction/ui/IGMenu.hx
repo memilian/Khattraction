@@ -3,7 +3,6 @@ import engine.input.Dispatcher;
 import engine.ui.Label;
 import khattraction.level.LevelManager;
 import khattraction.entities.Wall;
-import khattraction.entities.Wall;
 import engine.world.WorldManager;
 import khattraction.entities.GravitationalObject;
 import engine.ui.Button;

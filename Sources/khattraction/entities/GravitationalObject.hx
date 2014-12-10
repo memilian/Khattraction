@@ -37,7 +37,7 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
 
     var sine = 0.0;
 
-    var image : Image;
+    var circle : Image;
     var maxInfluence = 5;
     var center : Vector3;
     var fxArr : Array<GravObjFx>;
@@ -54,7 +54,7 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
             minStrength = -1*maxStrength;
             maxStrength = -1*tmp;
         }
-        image = Loader.the.getImage("bullet");
+        circle = Loader.the.getImage("circle");
         Dispatcher.get().mouseNotify(mouseDown,mouseUp,onMouseDragged,onMouseMoved,onMouseWheel);
         fxArr = new Array<GravObjFx>();
         Actuate.tween(this, 3,{sine:360}).repeat().reflect().smartRotation();
@@ -179,7 +179,7 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
         }
         if(isDead)
             return;
-        var radius = inverseStrength?5:size.x;
+        var radius = inverseStrength?5:forceRadius;
         var angle = sine/5;
         var sineRatio = sine/360;
         for(i in 0...3){
@@ -209,17 +209,24 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
     override public function render(g : Graphics){
         if(isDead)
             return;
-        g.pushOpacity(0.2);
-        g.set_color(Color.Green);
+        if(hover)
+        {
+            g.pushOpacity(0.8);
+            g.set_color(Color.fromBytes(40,200,50,128));
+            g.drawCircle(center.x,center.y, forceRadius);
+            //g.set_color(Color.fromBytes(40,200,50,50));
+            //g.drawCircle(center.x,center.y, forceRadius-1);
+            //g.drawCircle(center.x,center.y, forceRadius+1);
+            //g.drawScaledImage(circle, position.x-45, position.y-45,180, 180);
+//g.drawScaledImage(image, position.x, position.y, size.x, size.y);
 
-        //g.drawScaledImage(image, position.x, position.y, size.x, size.y);
-        if(hover)
-            g.drawCircle(center.x,center.y, forceRadius);
-/*
-        g.drawScaledImage(image, position.x, position.y, size.x, size.y);
-        if(hover)
-            g.drawCircle(center.x,center.y, forceRadius);
-            */
-        g.popOpacity();
+
+    /*
+            g.drawScaledImage(image, position.x, position.y, size.x, size.y);
+            if(hover)
+                g.drawCircle(center.x,center.y, forceRadius);
+                */
+            g.popOpacity();
+        }
     }
 }

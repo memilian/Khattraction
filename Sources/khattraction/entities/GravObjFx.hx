@@ -1,4 +1,5 @@
 package khattraction.entities;
+import engine.physic.AABB;
 import motion.easing.Linear;
 import motion.easing.Linear;
 import motion.Actuate;
@@ -29,6 +30,7 @@ class GravObjFx extends MovingEntity{
         super.update();
         lifeTime = Timer.stamp()-birthTime;
         lifeRatio = Math.min(1, lifeTime/ttl);
+
 
         if(lifeTime > ttl){
             isDead = true;

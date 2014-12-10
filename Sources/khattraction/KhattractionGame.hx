@@ -1,14 +1,7 @@
 package khattraction;
 
-import engine.ui.Label;
 import khattraction.level.LevelManager;
-import kha.CanvasImage;
-import kha.Canvas;
-import kha.FontStyle;
 import khattraction.ui.IGMenu;
-import engine.ui.Menu;
-import khattraction.entities.GravitationalObject;
-import khattraction.entities.Wall;
 import haxe.Timer;
 import engine.world.WorldManager;
 import engine.physic.AABB;
@@ -17,7 +10,6 @@ import kha.LoadingScreen;
 import engine.input.Dispatcher;
 import kha.math.Random;
 import kha.math.Vector3;
-import khattraction.entities.BulletLauncher;
 import kha.Scaler;
 import kha.Color;
 import kha.Framebuffer;
@@ -45,9 +37,9 @@ class KhattractionGame extends Game {
 	override public function init(): Void {
 		Configuration.setScreen(new LoadingScreen());
 		Random.init(Math.floor(Date.now().getTime()));
+		WorldManager.createInstance(6,3,200,190);
 		Loader.the.loadRoom("main", loadDone);
 		backBuffer = Image.createRenderTarget(width, height);
-		WorldManager.createInstance(6,3,200,190);
 	}
 
 	public function loadDone(){

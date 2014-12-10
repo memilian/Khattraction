@@ -3,50 +3,12 @@
 <head>
 	<meta charset="utf-8"/>
 	<title>Khattraction</title>
-	<style>
-		.content{
-			width:900px;
-			margin:0 auto;
-		}
-		body{
-			background-color: rgb(55,55,55);
-			color:rgb(240,240,240);
-		}
-		canvas{
-			border:1px solid black;
-		}
-		a{
-			color:dodgerblue;
-		}
-	</style>
 </head>
 <body>
-<h2 align="center">Khattraction</h2>
-
-<p align="center">
-
-	<canvas id="khanvas" width="1200" height="550" style="outline: none;"></canvas>
-</p>
-<div id="haxe:trace" ></div>
-<div class="content">
-	<p>
-		The goal is simple : you need to shoot the <span style="color:mediumpurple">purple</span> target while avoiding the <span style="color:dodgerblue">walls</span>.
-		You can influence the trajectory of the bullets with attractors and repulsors.
+	<p align="center">
+		<canvas id="khanvas" width="1200" height="550" style="outline: none;"></canvas>
 	</p>
-	<strong>Controls :</strong>
-
-	<ul>
-		<li>Space to shoot bullets</li>
-		<li>W/S to change the angle of the <span style="color:limegreen ">launcher</span></li>
-		<li>Drag the attractors/repulsors with left click</span></li>
-		<li>Remove an attractor/repulsor with right click</span></li>
-		<li>Change the strenght of an attractor/repulsor by dragging it horizontally with right click</span></li>
-	</ul>
-	<p>
-		Source code available on <a href="https://github.com/memilian/Khattraction">github</a>
-
-	</p>
-</div>
-<script src="kha.js"></script>
+	<div id="haxe:trace" ></div>
+	<script src="kha.js"></script>
 </body>
 </html>

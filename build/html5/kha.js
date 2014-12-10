@@ -9513,9 +9513,9 @@ khattraction.KhattractionGame.prototype = $extend(kha.Game.prototype,{
 	init: function() {
 		kha.Configuration.setScreen(new kha.LoadingScreen());
 		kha.math.Random.init(Math.floor(new Date().getTime()));
+		engine.world.WorldManager.createInstance(6,3,200,190);
 		kha.Loader.the.loadRoom("main",$bind(this,this.loadDone));
 		this.backBuffer = kha.Image.createRenderTarget(this.width,this.height);
-		engine.world.WorldManager.createInstance(6,3,200,190);
 	}
 	,loadDone: function() {
 		kha.Configuration.setScreen(this);
@@ -9826,7 +9826,7 @@ khattraction.entities.GravitationalObject = function(position,inverseStrength,fo
 		this.minStrength = -1 * this.maxStrength;
 		this.maxStrength = -1 * tmp;
 	}
-	this.image = kha.Loader.the.getImage("bullet");
+	this.circle = kha.Loader.the.getImage("circle");
 	engine.input.Dispatcher.get().mouseNotify($bind(this,this.mouseDown),$bind(this,this.mouseUp),$bind(this,this.onMouseDragged),$bind(this,this.onMouseMoved),$bind(this,this.onMouseWheel));
 	this.fxArr = new Array();
 	motion.Actuate.tween(this,3,{ sine : 360}).repeat().reflect().smartRotation();
@@ -9926,7 +9926,7 @@ khattraction.entities.GravitationalObject.prototype = $extend(khattraction.entit
 		}
 		if(this.isDead) return;
 		var radius;
-		if(this.inverseStrength) radius = 5; else radius = this.size.x;
+		if(this.inverseStrength) radius = 5; else radius = this.forceRadius;
 		var angle = this.sine / 5;
 		var sineRatio = this.sine / 360;
 		var _g2 = 0;
@@ -9946,10 +9946,12 @@ khattraction.entities.GravitationalObject.prototype = $extend(khattraction.entit
 	}
 	,render: function(g) {
 		if(this.isDead) return;
-		g.pushOpacity(0.2);
-		g.set_color(kha._Color.Color_Impl_.Green);
-		if(this.hover) kha.graphics2.GraphicsExtension.drawCircle(g,this.center.x,this.center.y,this.forceRadius);
-		g.popOpacity();
+		if(this.hover) {
+			g.pushOpacity(0.8);
+			g.set_color(kha._Color.Color_Impl_.fromBytes(40,200,50,128));
+			kha.graphics2.GraphicsExtension.drawCircle(g,this.center.x,this.center.y,this.forceRadius);
+			g.popOpacity();
+		}
 	}
 	,__class__: khattraction.entities.GravitationalObject
 });

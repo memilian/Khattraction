@@ -11,13 +11,19 @@ fi
 
 
 #clean
-pkill python;
+
 if [ $1 = "html5" ]
 then
-echo rm
-        rm -r build/"$1";
+        pkill python;
+        echo rm
+        rm -r build/"$1"/kha*;
 fi
-node ./Kha/Tools/khamake/khamake.js $1;
-cd build/"$1";
 
-python -m SimpleHTTPServer;
+node ./Kha/Tools/khamake/khamake.js $1;
+
+if [ $1 = "html5" ]
+then
+        cd build/"$1";
+        python -m SimpleHTTPServer;
+fi
+

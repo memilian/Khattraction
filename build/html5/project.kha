@@ -56,6 +56,12 @@
 			"type": "blob",
 			"file": "level5.json",
 			"name": "level5"
+		},
+		{
+			"id": "38eb6a35-6240-4db8-931c-25c5d53c8f10",
+			"type": "image",
+			"file": "circle.png",
+			"name": "circle"
 		}
 	],
 	"rooms": [
@@ -72,7 +78,8 @@
 				"45f30798-fc5c-4105-9ea0-aaf0defbf3fc",
 				"6451e085-c862-427f-8f93-720de7ab5287",
 				"ee5aa7f2-31d2-4da4-aa17-89cf72595d71",
-				"81ef8442-7345-417d-8c95-771da7b9f25b"
+				"81ef8442-7345-417d-8c95-771da7b9f25b",
+				"38eb6a35-6240-4db8-931c-25c5d53c8f10"
 			]
 		}
 	],
