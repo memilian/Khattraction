@@ -5,8 +5,8 @@ import kha.math.Vector3;
 
 class AABB {
 
-    @:isVar var position:Vector3;
-    @:isVar var size:Vector3;
+    @:isVar public var position:Vector3;
+    @:isVar public var size:Vector3;
 
     public function new(position : Vector3, size : Vector3){
         this.position = position;

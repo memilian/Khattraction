@@ -1,0 +1,7 @@
+varying mediump vec4 fragmentColor;
+void kore(){
+(gl_FragColor = fragmentColor);
+}
+void main(){
+kore();
+}

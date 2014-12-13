@@ -1,0 +1,9 @@
+-cp ../Sources
+-cp ../Kha/Sources
+-cp ../Kha/Backends/HTML5
+-cp ../actuate/1,7,5
+-D embed_js
+-D DEBUG
+-D EDITOR_MODE
+-js html5Editor/kha.js
+-main Main

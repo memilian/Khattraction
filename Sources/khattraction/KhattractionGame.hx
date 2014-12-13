@@ -1,6 +1,6 @@
 package khattraction;
 
-import engine.ui.Label;
+import engine.utils.Debug;
 import khattraction.level.LevelManager;
 import kha.CanvasImage;
 import kha.Canvas;
@@ -45,9 +45,9 @@ class KhattractionGame extends Game {
 	override public function init(): Void {
 		Configuration.setScreen(new LoadingScreen());
 		Random.init(Math.floor(Date.now().getTime()));
+		WorldManager.createInstance(6,3,200,190);
 		Loader.the.loadRoom("main", loadDone);
 		backBuffer = Image.createRenderTarget(width, height);
-		WorldManager.createInstance(6,3,200,190);
 	}
 
 	public function loadDone(){
@@ -91,6 +91,10 @@ class KhattractionGame extends Game {
 		g.begin();
 		g.clear(Color.fromBytes(48,48,48,255));
 		WorldManager.the.render(g);
+
+		#if DEBUG
+		Debug.drawEntitiesBounds(g);
+		#end
 //	g.setBlendingMode(BlendingOperation.BlendOne, BlendingOperation.InverseDestinationAlpha);
 	//	g.setBlendingMode(BlendingOperation.BlendOne, BlendingOperation.BlendOne);
 	//	g.setBlendingMode(BlendingOperation.SourceAlpha, BlendingOperation.InverseSourceAlpha);

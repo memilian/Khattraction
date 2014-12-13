@@ -1,0 +1,113 @@
+{
+	"format": 1,
+	"game": {
+		"name": "Khattraction",
+		"width": 1200,
+		"height": 550
+	},
+	"sources": [
+		"actuate/1,7,5"
+	],
+	"assets": [
+		{
+			"id": "49fcc545-106c-4029-81aa-fa3ad3f1a8e7",
+			"type": "image",
+			"file": "bullet.png",
+			"name": "bullet"
+		},
+		{
+			"id": "36b520f2-ea8a-4d69-9e23-d36b388e1a15",
+			"type": "blob",
+			"file": "Roboto18.kravur",
+			"name": "Roboto18.kravur"
+		},
+		{
+			"id": "3127875e-53c1-467b-a307-8239e9a1c158",
+			"type": "blob",
+			"file": "level1.json",
+			"name": "level1"
+		},
+		{
+			"id": "8ffcc275-58f3-43fb-a18c-064601d6d699",
+			"type": "blob",
+			"file": "levels.json",
+			"name": "levels"
+		},
+		{
+			"id": "45f30798-fc5c-4105-9ea0-aaf0defbf3fc",
+			"type": "blob",
+			"file": "level2.json",
+			"name": "level2"
+		},
+		{
+			"id": "6451e085-c862-427f-8f93-720de7ab5287",
+			"type": "blob",
+			"file": "level3.json",
+			"name": "level3"
+		},
+		{
+			"id": "ee5aa7f2-31d2-4da4-aa17-89cf72595d71",
+			"type": "blob",
+			"file": "level4.json",
+			"name": "level4"
+		},
+		{
+			"id": "81ef8442-7345-417d-8c95-771da7b9f25b",
+			"type": "blob",
+			"file": "level5.json",
+			"name": "level5"
+		}
+	],
+	"rooms": [
+		{
+			"id": "ca3cb0af-f9f7-4605-80d5-fea8c52b1f2f",
+			"name": "main",
+			"parent": null,
+			"neighbours": [],
+			"assets": [
+				"49fcc545-106c-4029-81aa-fa3ad3f1a8e7",
+				"36b520f2-ea8a-4d69-9e23-d36b388e1a15",
+				"3127875e-53c1-467b-a307-8239e9a1c158",
+				"8ffcc275-58f3-43fb-a18c-064601d6d699",
+				"45f30798-fc5c-4105-9ea0-aaf0defbf3fc",
+				"6451e085-c862-427f-8f93-720de7ab5287",
+				"ee5aa7f2-31d2-4da4-aa17-89cf72595d71",
+				"81ef8442-7345-417d-8c95-771da7b9f25b"
+			]
+		}
+	],
+	"shaders": [
+		{
+			"file": "painter-colored.frag.essl",
+			"name": "painter-colored.frag"
+		},
+		{
+			"file": "painter-colored.vert.essl",
+			"name": "painter-colored.vert"
+		},
+		{
+			"file": "painter-image.frag.essl",
+			"name": "painter-image.frag"
+		},
+		{
+			"file": "painter-image.vert.essl",
+			"name": "painter-image.vert"
+		},
+		{
+			"file": "painter-text.frag.essl",
+			"name": "painter-text.frag"
+		},
+		{
+			"file": "painter-text.vert.essl",
+			"name": "painter-text.vert"
+		},
+		{
+			"file": "scene-mesh.frag.essl",
+			"name": "scene-mesh.frag"
+		},
+		{
+			"file": "scene-mesh.vert.essl",
+			"name": "scene-mesh.vert"
+		}
+	]
+}
