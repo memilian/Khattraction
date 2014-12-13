@@ -1,0 +1,9 @@
+uniform sampler2D tex;
+varying mediump vec2 texCoord;
+varying mediump vec4 fragmentColor;
+void kore(){
+(gl_FragColor = vec4(fragmentColor.xyz, (texture2D(tex, texCoord).x * fragmentColor.w)));
+}
+void main(){
+kore();
+}

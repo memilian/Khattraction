@@ -772,6 +772,19 @@ engine.ui.Menu.prototype = $extend(engine.ui.UIElement.prototype,{
 	,__class__: engine.ui.Menu
 });
 engine.utils = {};
+engine.utils.Debug = function() { };
+$hxClasses["engine.utils.Debug"] = engine.utils.Debug;
+engine.utils.Debug.__name__ = ["engine","utils","Debug"];
+engine.utils.Debug.drawEntitiesBounds = function(g) {
+	var _g = 0;
+	var _g1 = engine.world.WorldManager.the.getEntities();
+	while(_g < _g1.length) {
+		var ent = _g1[_g];
+		++_g;
+		var aabb = engine.physic.AABB.AabbFromEntity(ent);
+		g.drawRect(aabb.position.x,aabb.position.y,aabb.size.x,aabb.size.y);
+	}
+};
 engine.utils.Pair = function(x,y) {
 	this.x = x;
 	this.y = y;
@@ -838,6 +851,8 @@ engine.world.WorldManager.prototype = {
 				if(p != part) p.removeOverlappingEntity(ent);
 			}
 		}
+	}
+	,updatePart: function(ent,oldPos,pos) {
 	}
 	,destroyEntity: function(ent) {
 		var part = this.getPartForEntity(ent);
@@ -934,6 +949,12 @@ engine.world.WorldManager.prototype = {
 			if(!part.bounds.collide(aabb)) continue;
 			var shallowEnt = Type.createInstance(type,new Array());
 			var arr = part.getEntitiesOfType(shallowEnt,includeOverlapping);
+			var _g = 0;
+			while(_g < arr.length) {
+				var ent = arr[_g];
+				++_g;
+				if(HxOverrides.indexOf(res,ent,0) >= 0) HxOverrides.remove(arr,ent);
+			}
 			shallowEnt.onDestroy();
 			res = res.concat(arr);
 		}
@@ -984,6 +1005,10 @@ engine.world.WorldPart.prototype = {
 	,removeEntity: function(ent) {
 		HxOverrides.remove(this.entities,ent);
 	}
+	,destroyEntity: function(ent) {
+		ent.onDestroy();
+		HxOverrides.remove(this.entities,ent);
+	}
 	,getEntities: function() {
 		return this.entities;
 	}
@@ -1002,13 +1027,9 @@ engine.world.WorldPart.prototype = {
 			if(Type.getClass(ent) == khattraction.entities.Bullet && (js.Boot.__cast(ent , khattraction.entities.Bullet)).shouldBeDead) HxOverrides.remove(this.entities,ent);
 			if(!this.bounds.contains(ent.position) && Type.getClass(ent) != khattraction.entities.Wall) {
 				this.entitiesToRemove.push(ent);
-				if(!engine.world.WorldManager.the.placeLater(ent)) this.entitiesToRemove.push(ent);
+				if(!engine.world.WorldManager.the.placeLater(ent)) this.destroyEntity(ent);
 			}
 		}
-	}
-	,destroyEntity: function(ent) {
-		ent.onDestroy();
-		HxOverrides.remove(this.entities,ent);
 	}
 	,addOverlappingEntity: function(ent) {
 		this.entitiesOverlapping.push(ent);
@@ -9543,6 +9564,8 @@ khattraction.KhattractionGame.prototype = $extend(kha.Game.prototype,{
 		}
 		this.lastRender = haxe.Timer.stamp();
 		var g = this.backBuffer.get_g2();
+		g.setBlendingMode(kha.graphics4.BlendingOperation.SourceAlpha,kha.graphics4.BlendingOperation.BlendOne);
+		g.set_opacity(1);
 		g.begin();
 		g.clear(kha._Color.Color_Impl_.fromBytes(48,48,48,255));
 		engine.world.WorldManager.the.render(g);
@@ -9618,7 +9641,7 @@ khattraction.entities.MovingEntity.prototype = $extend(khattraction.entities.Ent
 });
 khattraction.entities.Bullet = function(position,size,initialVelocity) {
 	this.shouldBeDead = false;
-	this.damage = 1.0;
+	this.damage = 10.0;
 	this.speed = 6.0;
 	this.defaultColor = 25358591;
 	this.maxTimeAlive = 800;
@@ -9663,20 +9686,20 @@ khattraction.entities.Bullet.prototype = $extend(khattraction.entities.MovingEnt
 			++_g;
 			if(engine.physic.AABB.AabbFromEntity(this).collide(engine.physic.AABB.AabbFromEntity(wall))) this.isDead = true;
 		}
-		var targets = engine.world.WorldManager.the.getEntitiesInAabb(engine.physic.AABB.AabbFromEntity(this).expand(50),khattraction.entities.Target);
+		var targets = engine.world.WorldManager.the.getEntitiesInAabb(engine.physic.AABB.AabbFromEntity(this).expand(50),khattraction.entities.Target,true);
 		var _g1 = 0;
 		while(_g1 < targets.length) {
 			var t = targets[_g1];
 			++_g1;
-			if(engine.physic.AABB.AabbFromEntity(this).collide(engine.physic.AABB.AabbFromEntity(t))) {
-				if(khattraction.mathutils.Utils.distance(this.position,t.position) < t.size.x) {
-					(js.Boot.__cast(t , khattraction.entities.Target)).takeDamage(this.damage);
-					this.isDead = true;
-				}
+			var tAabb = engine.physic.AABB.AabbFromEntity(t);
+			if(khattraction.mathutils.Utils.distance(this.position,tAabb.getCenter()) < t.size.x / 2) {
+				(js.Boot.__cast(t , khattraction.entities.Target)).takeDamage(this.damage);
+				this.isDead = true;
 			}
 		}
 	}
 	,render: function(g) {
+		g.setBlendingMode(kha.graphics4.BlendingOperation.BlendOne,kha.graphics4.BlendingOperation.Undefined);
 		if(this.isDead) {
 			this.playDeathAnimation(g);
 			return;
@@ -9898,7 +9921,7 @@ khattraction.entities.GravitationalObject.prototype = $extend(khattraction.entit
 		motion.Actuate.tween(this,2,{ forceStrength : -100 * this.forceStrength}).ease(motion.easing.Linear.get_easeNone());
 	}
 	,resizeStrength: function(ds) {
-		if(this.forceStrength + ds < this.maxStrength && this.forceStrength + ds > this.minStrength) this.forceStrength += ds;
+		if(this.forceStrength + ds <= this.maxStrength && this.forceStrength + ds >= this.minStrength) this.forceStrength += ds;
 	}
 	,resizeRadius: function(dr) {
 	}
@@ -9918,11 +9941,9 @@ khattraction.entities.GravitationalObject.prototype = $extend(khattraction.entit
 		while(_g1 < _g11.length) {
 			var fx = _g11[_g1];
 			++_g1;
-			if(fx.isDead) {
-				HxOverrides.remove(this.fxArr,fx);
-				engine.world.WorldManager.the.removeEntity(fx);
-			}
+			if(fx.isDead) HxOverrides.remove(this.fxArr,fx);
 			this.applyInfluence(fx);
+			fx.update();
 		}
 		if(this.isDead) return;
 		var radius;
@@ -9938,7 +9959,6 @@ khattraction.entities.GravitationalObject.prototype = $extend(khattraction.entit
 			var nfx = new khattraction.entities.GravObjFx(pos,new kha.math.Vector3(baseSize,baseSize,0));
 			if(this.inverseStrength) nfx.color = kha._Color.Color_Impl_.fromBytes(255 - 100 * sineRatio | 0,155 + 100 * sineRatio | 0,0); else nfx.color = kha._Color.Color_Impl_.fromBytes(0,255 - 100 * sineRatio | 0,155 + 100 * sineRatio | 0);
 			nfx.ttl = 1.0;
-			engine.world.WorldManager.the.spawnEntity(nfx);
 			this.fxArr.push(nfx);
 			motion.Actuate.tween(nfx.size,4,{ x : this.inverseStrength?1:15});
 			motion.Actuate.tween(nfx.size,4,{ y : this.inverseStrength?1:15});
@@ -9946,41 +9966,88 @@ khattraction.entities.GravitationalObject.prototype = $extend(khattraction.entit
 	}
 	,render: function(g) {
 		if(this.isDead) return;
+		var _g = 0;
+		var _g1 = this.fxArr;
+		while(_g < _g1.length) {
+			var fx = _g1[_g];
+			++_g;
+			fx.render(g);
+		}
 		if(this.hover) {
 			g.pushOpacity(0.8);
 			g.set_color(kha._Color.Color_Impl_.fromBytes(40,200,50,128));
 			kha.graphics2.GraphicsExtension.drawCircle(g,this.center.x,this.center.y,this.forceRadius);
+			var barSteps = 25;
+			var barHeight = this.forceRadius * 2;
+			var heightStep = barHeight / barSteps;
+			var barWidth = 15;
+			var barRatio = khattraction.mathutils.Utils.rescale(this.forceStrength,this.minStrength,this.maxStrength,0,barSteps);
+			if(this.inverseStrength) barRatio = barSteps - barRatio;
+			g.set_color(kha._Color.Color_Impl_.Black);
+			g.drawRect(this.center.x - this.forceRadius - barWidth,this.center.y + this.forceRadius,barWidth,-barHeight);
+			var _g2 = 0;
+			while(_g2 < barSteps) {
+				var i = _g2++;
+				g.set_color(kha._Color.Color_Impl_.fromBytes(250 - 200 * i / barSteps | 0,50 + 45 * i / barSteps | 0,255 * i / barSteps | 0));
+				if(i >= barRatio) break;
+				g.fillRect(this.center.x - this.forceRadius - barWidth,this.center.y + this.forceRadius - i * heightStep,barWidth,-heightStep);
+			}
 			g.popOpacity();
 		}
 	}
 	,__class__: khattraction.entities.GravitationalObject
 });
 khattraction.entities.Target = function(position) {
+	this.barAlpha = 0;
 	this.maxDeadCounter = 60;
 	this.deadCounter = 0;
+	this.maxLife = 50;
 	this.life = 50;
 	khattraction.entities.Entity.call(this,position,new kha.math.Vector3(40,40,0));
+	engine.input.Dispatcher.get().mouseNotify(null,null,null,$bind(this,this.onMouseMoved),null);
 };
 $hxClasses["khattraction.entities.Target"] = khattraction.entities.Target;
 khattraction.entities.Target.__name__ = ["khattraction","entities","Target"];
 khattraction.entities.Target.__super__ = khattraction.entities.Entity;
 khattraction.entities.Target.prototype = $extend(khattraction.entities.Entity.prototype,{
-	update: function() {
+	onDestroy: function() {
+		engine.input.Dispatcher.get().mouseRemove(null,null,null,$bind(this,this.onMouseMoved),null);
+	}
+	,update: function() {
 		khattraction.entities.Entity.prototype.update.call(this);
-		if(this.life < 0) {
+		if(this.life <= 0) {
 			if(this.deadCounter++ == this.maxDeadCounter) khattraction.level.LevelManager.loadNext();
 		}
 	}
 	,render: function(g) {
 		var center = engine.physic.AABB.AabbFromEntity(this).getCenter();
-		if(this.life < 0) {
+		if(this.barAlpha > 0) {
+			var barSteps = this.maxLife | 0;
+			var barHeight = this.size.y * 2;
+			var heightStep = barHeight / barSteps;
+			var barWidth = 15;
+			var barRatio = barSteps / this.maxLife * this.life;
+			g.set_color(kha._Color.Color_Impl_.Black);
+			g.setBlendingMode(kha.graphics4.BlendingOperation.SourceAlpha,kha.graphics4.BlendingOperation.BlendOne);
+			g.pushOpacity(255 - this.barAlpha);
+			g.drawRect(center.x - this.size.x - barWidth,center.y + this.size.y,barWidth,-barHeight);
+			var _g = 0;
+			while(_g < barSteps) {
+				var i = _g++;
+				g.set_color(kha._Color.Color_Impl_.fromBytes(250 - 200 * i / barSteps | 0,50 + 200 * i / barSteps | 0,0,this.barAlpha | 0));
+				if(i >= barRatio) break;
+				g.fillRect(center.x - this.size.x - barWidth,center.y + this.size.y - i * heightStep,barWidth,-heightStep);
+			}
+			g.popOpacity();
+		}
+		if(this.life <= 0) {
 			var deathRatio = 1.0 * this.deadCounter / (1.0 * this.maxDeadCounter);
 			g.set_color(kha._Color.Color_Impl_.fromBytes(100 + (deathRatio * 155 | 0),255 - (deathRatio * 150 | 0),100 - (deathRatio * 100 | 0),255 - (255 * deathRatio | 0)));
-			var _g = 0;
-			while(_g < 50) {
-				var i = _g++;
-				var dAngle = i * Math.PI * 0.01 * deathRatio + Math.PI / 5;
-				kha.graphics2.GraphicsExtension.fillCircle(g,center.x + deathRatio * Math.cos(dAngle * i) * 150,center.y + deathRatio * Math.sin(dAngle * i) * 150,this.size.x / 2 - this.size.x / 2 * deathRatio);
+			var _g1 = 0;
+			while(_g1 < 50) {
+				var i1 = _g1++;
+				var dAngle = i1 * Math.PI * 0.01 * deathRatio + Math.PI / 5;
+				kha.graphics2.GraphicsExtension.fillCircle(g,center.x + deathRatio * Math.cos(dAngle * i1) * 150,center.y + deathRatio * Math.sin(dAngle * i1) * 150,this.size.x / 2 - this.size.x / 2 * deathRatio);
 			}
 		} else {
 			g.set_color(kha._Color.Color_Impl_.Purple);
@@ -9989,6 +10056,15 @@ khattraction.entities.Target.prototype = $extend(khattraction.entities.Entity.pr
 	}
 	,takeDamage: function(amount) {
 		this.life -= amount;
+	}
+	,onMouseMoved: function(x,y) {
+		if(engine.physic.AABB.AabbFromEntity(this).contains(new kha.math.Vector3(x,y))) {
+			this.hover = true;
+			motion.Actuate.tween(this,0.3,{ barAlpha : 255});
+		} else {
+			motion.Actuate.tween(this,0.3,{ barAlpha : 0});
+			this.hover = false;
+		}
 	}
 	,__class__: khattraction.entities.Target
 });
@@ -10103,6 +10179,9 @@ khattraction.mathutils.Utils.distance = function(v,v2) {
 khattraction.mathutils.Utils.distanceSq = function(v,v2) {
 	var vec = v.sub(v2);
 	return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z;
+};
+khattraction.mathutils.Utils.rescale = function(value,min,max,targetMin,targetMax) {
+	return (targetMax - targetMin) / (max - min) * (value - min) + targetMin;
 };
 khattraction.ui = {};
 khattraction.ui.IGMenu = function() {

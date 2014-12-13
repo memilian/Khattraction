@@ -39,6 +39,7 @@ class Wall extends Entity{
     override public function onDestroy(){
         Dispatcher.get().mouseRemove(mouseDown,mouseUp,onMouseDragged,onMouseMoved,null);
     }
+
     var lastResize = 0.0;
     var xBuf = 0;
     var yBuf = 0;
@@ -56,12 +57,16 @@ class Wall extends Entity{
             var nx = Math.round((position.x+xBuf)/20)*20;
             var ny = Math.round((position.y+yBuf)/20)*20;
             if(nx != position.x){
+                WorldManager.the.removeEntity(this);
                 position.x = nx;
                 xBuf = 0;
+                WorldManager.the.spawnEntity(this);
             }
             if(ny != position.y){
+                WorldManager.the.removeEntity(this);
                 position.y = ny;
                 yBuf = 0;
+                WorldManager.the.spawnEntity(this);
             }
         }else if(selected && button == Dispatcher.BUTTON_RIGHT){
             if(Timer.stamp()-lastResize < 0.2)
@@ -77,10 +82,11 @@ class Wall extends Entity{
     public function mouseUp(button:Int, x:Int, y:Int){
         if(locked)
             return;
-
         if(!dragging && selected && button == Dispatcher.BUTTON_RIGHT){
+                trace(dragging+"   "+selected+"    "+button);
+
             isDead = true;
-            WorldManager.the.removeEntity(this);
+            WorldManager.the.destroyEntity(this);
         }
         if(selected)
             selected = false;

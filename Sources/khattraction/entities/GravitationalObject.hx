@@ -150,7 +150,8 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
     }
 
     public function resizeStrength(ds : Int):Void {
-        if(forceStrength+ds < maxStrength && forceStrength+ds > minStrength)
+
+        if(forceStrength+ds <= maxStrength && forceStrength+ds >= minStrength)
             forceStrength += ds;
     }
 
@@ -173,9 +174,10 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
         for(fx in fxArr){
             if(fx.isDead){
                 fxArr.remove(fx);
-                WorldManager.the.removeEntity(fx);
+                //WorldManager.the.removeEntity(fx);
             }
             applyInfluence(fx);
+            fx.update();
         }
         if(isDead)
             return;
@@ -193,35 +195,50 @@ class GravitationalObject extends Entity implements IPlaceable implements IHover
             var nfx = new GravObjFx(pos,new Vector3(baseSize,baseSize,0));
 
             if(inverseStrength)
-
                 nfx.color = Color.fromBytes(Std.int(255-100*sineRatio),Std.int(155+100*sineRatio),0);
             else
                 nfx.color = Color.fromBytes(0,Std.int(255-100*sineRatio),Std.int(155+100*sineRatio));
 
             nfx.ttl = 1.0;
-            WorldManager.the.spawnEntity(nfx);
             fxArr.push(nfx);
             Actuate.tween(nfx.size,4,{x:inverseStrength?1:15});
             Actuate.tween(nfx.size,4,{y:inverseStrength?1:15});
         }
+
     }
 
     override public function render(g : Graphics){
         if(isDead)
             return;
+        for(fx in fxArr){
+            fx.render(g);
+        }
         if(hover)
         {
             g.pushOpacity(0.8);
             g.set_color(Color.fromBytes(40,200,50,128));
             g.drawCircle(center.x,center.y, forceRadius);
-            //g.set_color(Color.fromBytes(40,200,50,50));
-            //g.drawCircle(center.x,center.y, forceRadius-1);
-            //g.drawCircle(center.x,center.y, forceRadius+1);
-            //g.drawScaledImage(circle, position.x-45, position.y-45,180, 180);
-//g.drawScaledImage(image, position.x, position.y, size.x, size.y);
+
+            var barSteps = 25;
+            var barHeight = forceRadius*2;
+            var heightStep = barHeight/barSteps;
+            var barWidth = 15;
+            var barRatio = Utils.rescale(forceStrength, minStrength,maxStrength, 0, barSteps);
+            if(inverseStrength)
+                barRatio = barSteps - barRatio;
+            g.set_color(Color.Black);
+            g.drawRect(center.x-forceRadius-barWidth,center.y+forceRadius,barWidth,-barHeight);
+            for(i in 0...barSteps){
+                g.set_color(Color.fromBytes(Std.int(250-200*i/barSteps),
+                                            Std.int(50+45*i/barSteps),
+                                            Std.int(255*i/barSteps)));
+                if(i>=barRatio)
+                    break;
+                g.fillRect(center.x-forceRadius-barWidth, center.y+forceRadius-i*heightStep, barWidth, -heightStep);
+            }
 
 
-    /*
+                /*
             g.drawScaledImage(image, position.x, position.y, size.x, size.y);
             if(hover)
                 g.drawCircle(center.x,center.y, forceRadius);

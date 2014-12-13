@@ -1,4 +1,5 @@
 package khattraction.entities;
+import kha.graphics4.BlendingOperation;
 import motion.Actuate;
 import engine.physic.AABB;
 import khattraction.mathutils.Utils;
@@ -23,7 +24,7 @@ class Bullet  extends MovingEntity{
     var maxTimeAlive : Int = 800;
     var defaultColor = Color.fromBytes(130,240,255,1);
     var speed = 6.0;
-    var damage = 1.0;
+    var damage = 10.0;
     static var sine = 0.0;
     public var shouldBeDead = false;
 
@@ -73,17 +74,20 @@ class Bullet  extends MovingEntity{
                 isDead = true;
         }
 
-        var targets = WorldManager.the.getEntitiesInAabb(AABB.AabbFromEntity(this).expand(50), Target);
+        var targets = WorldManager.the.getEntitiesInAabb(AABB.AabbFromEntity(this).expand(50), Target, true);
         for(t in targets){
-            if(AABB.AabbFromEntity(this).collide(AABB.AabbFromEntity(t)))
-                if(position.distance(t.position)<(t.size.x)){
-                    cast(t,Target).takeDamage(damage);
-                    isDead = true;
-                }
+            var tAabb = AABB.AabbFromEntity(t);
+
+            if(position.distance(tAabb.getCenter())<(t.size.x/2)){
+                cast(t,Target).takeDamage(damage);
+                isDead = true;
+            }
         }
     }
 
     override public function render(g : Graphics) : Void{
+        g.setBlendingMode(BlendingOperation.BlendOne, BlendingOperation.Undefined);
+
         if(isDead){
             playDeathAnimation(g);
             return;

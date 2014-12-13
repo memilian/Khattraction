@@ -1,5 +1,7 @@
 package khattraction;
 
+import kha.graphics4.BlendingOperation;
+import engine.utils.Debug;
 import khattraction.level.LevelManager;
 import khattraction.ui.IGMenu;
 import haxe.Timer;
@@ -79,10 +81,15 @@ class KhattractionGame extends Game {
 		lastRender = Timer.stamp();
 
 		var g = backBuffer.g2;
-
+		g.setBlendingMode(BlendingOperation.SourceAlpha, BlendingOperation.BlendOne);
+		g.set_opacity(1);
 		g.begin();
 		g.clear(Color.fromBytes(48,48,48,255));
 		WorldManager.the.render(g);
+
+		#if DEBUG
+		Debug.drawEntitiesBounds(g);
+		#end
 //	g.setBlendingMode(BlendingOperation.BlendOne, BlendingOperation.InverseDestinationAlpha);
 	//	g.setBlendingMode(BlendingOperation.BlendOne, BlendingOperation.BlendOne);
 	//	g.setBlendingMode(BlendingOperation.SourceAlpha, BlendingOperation.InverseSourceAlpha);

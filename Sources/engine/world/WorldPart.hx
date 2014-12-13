@@ -36,11 +36,14 @@ class WorldPart {
         entities.remove(ent);
     }
 
+    public function destroyEntity(ent : Entity){
+        ent.onDestroy();
+        entities.remove(ent);
+    }
+
     public function getEntities():Array<Entity> {
         return entities;
     }
-
-
 
     public function update(){
         while(entitiesToRemove.length >0){
@@ -58,16 +61,10 @@ class WorldPart {
             if(!bounds.contains(ent.position) && Type.getClass(ent) != Wall){
                 entitiesToRemove.push(ent);
                 if(!WorldManager.the.placeLater(ent))
-                    entitiesToRemove.push(ent);
+                    destroyEntity(ent);
             }
         }
     }
-
-    public function destroyEntity(ent :Entity){
-        ent.onDestroy();
-        entities.remove(ent);
-    }
-
 
     public function addOverlappingEntity(ent : Entity){
         entitiesOverlapping.push(ent);

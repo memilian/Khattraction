@@ -24,5 +24,8 @@ class Utils {
         return (vec.x*vec.x+vec.y*vec.y+vec.z*vec.z);
     }
 
+    public static inline function rescale<T : Float,Double>(value : Float, min : Float, max : Float, targetMin : Float, targetMax : Float) : Float{
+        return (targetMax-targetMin)/(max-min)*(value-min)+targetMin;
+    }
 
 }

@@ -5,8 +5,8 @@ import kha.math.Vector3;
 
 class AABB {
 
-    @:isVar var position:Vector3;
-    @:isVar var size:Vector3;
+    @:isVar public var position:Vector3;
+    @:isVar public var size:Vector3;
 
     public function new(position : Vector3, size : Vector3){
         this.position = position;
@@ -17,7 +17,7 @@ class AABB {
         this.position = pos;
         this.size = size;
     }
-    public static function AabbFromEntity(ent : Entity) {
+    public static function AabbFromEntity(ent : Entity) : AABB {
         return new AABB(ent.position.mult(1),ent.size.mult(1));
     }
 
@@ -25,7 +25,7 @@ class AABB {
         return new AABB(new Vector3(position.x-amount/2,position.y-amount/2,0),new Vector3(size.x+amount/2, size.y+amount/2));
     }
 
-    public function getCenter():Vector3 {
+    public function getCenter() : Vector3 {
 
         return new Vector3(position.x+size.x/2,
                             position.y+size.y/2,

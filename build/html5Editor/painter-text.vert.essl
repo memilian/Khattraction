@@ -1,0 +1,14 @@
+attribute highp vec3 vertexPosition;
+attribute highp vec2 texPosition;
+attribute highp vec4 vertexColor;
+uniform highp mat4 projectionMatrix;
+varying highp vec2 texCoord;
+varying highp vec4 fragmentColor;
+void kore(){
+(gl_Position = (projectionMatrix * vec4(vertexPosition, 1.0)));
+(texCoord = texPosition);
+(fragmentColor = vertexColor);
+}
+void main(){
+kore();
+}

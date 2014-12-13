@@ -54,6 +54,10 @@ class WorldManager {
         }
     }
 
+    public function updatePart(ent : Entity, oldPos : Vector3, pos : Vector3):Void {
+
+    }
+
     public function destroyEntity(ent : Entity){
         var part : WorldPart= getPartForEntity(ent);
         if(part != null){
@@ -150,6 +154,10 @@ class WorldManager {
                 continue;
             var shallowEnt : Entity = Type.createInstance(type, new Array());
             var arr = part.getEntitiesOfType(shallowEnt, includeOverlapping);
+            for(ent in arr){
+                if(res.indexOf(ent)>=0)
+                    arr.remove(ent);
+            }
             shallowEnt.onDestroy();
             res = res.concat(arr);
         }
